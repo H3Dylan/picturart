@@ -1,6 +1,6 @@
 # Pictur'Art — Cahier des charges
 
-> Version 0.1 — 11 octobre 2026 — Dylan Bouillon
+> Version 0.2 — 11 octobre 2026 — Dylan Bouillon
 > Statut : brouillon à valider avant la phase DA / maquettes
 
 ---
@@ -9,21 +9,22 @@
 
 Pictur'Art est né comme projet de cours : une PWA d'albums photo privés avec réactions et commentaires (React, Express, MongoDB). Cette v2 est une **réécriture complète**, pensée pour un usage réel et comme projet vitrine de portfolio.
 
-Avant de se lancer, [Immich](https://immich.app) a été testé sur le serveur perso. Verdict : excellent pour *sauvegarder* une photothèque, mais pas adapté à notre usage. Il pousse à synchroniser toute sa galerie, ajouter une photo à un album demande trop de clics, et l'aspect social (réactions, activité) est secondaire.
+Avant de se lancer, une solution de galerie auto-hébergée (type Google Photos) a été testée. Verdict : trop aseptisée. Elle pousse à synchroniser toute sa galerie, ajouter une photo à un album demande trop de clics, et l'aspect social est secondaire. Ce qu'on veut n'est pas une galerie, c'est **un réseau social privé pour notre bande**.
 
 ### Objectif
 
-> **Partager des photos entre potes aussi simplement que sur WhatsApp, avec la qualité et la mise en valeur d'un vrai album souvenir.**
+> **Le réseau social privé de la bande : on y poste nos moments, on se chambre, on réagit, et nos événements restent gravés, en qualité originale.**
 
 ### Ce qui fait la différence
 
-| | WhatsApp | Immich / Google Photos | **Pictur'Art** |
-|---|---|---|---|
-| Envoyer une photo | 2 gestes | Synchro de galerie ou menu caché | **2 gestes** |
-| Qualité | Compressée | Originale | **Originale (4K incluse)** |
-| Organisation | Noyée dans la conversation | Albums | **Albums** |
-| Réactions / activité | Oui | Minimal | **Au centre de l'expérience** |
-| Données | Chez Meta | Chez Google / auto-hébergé | **Auto-hébergé** |
+| | WhatsApp | Instagram | Google Photos | **Pictur'Art** |
+|---|---|---|---|---|
+| Public | Le groupe | Tout le monde | Soi-même | **Uniquement la bande** |
+| Poster | 2 gestes | 3–4 gestes | Synchro de galerie | **2 gestes** |
+| Qualité | Compressée | Compressée | Originale | **Originale (4K incluse)** |
+| Organisation | Noyée dans la conversation | Fil sans fin | Albums | **Événements permanents + fil** |
+| Ambiance | Messagerie | Mise en scène | Utilitaire | **Entre potes, inside jokes, souvenirs** |
+| Données | Meta | Meta | Google | **Auto-hébergé** |
 
 ---
 
@@ -33,9 +34,9 @@ Un groupe d'environ **10 potes**. Pas d'inscription publique : on n'entre que su
 
 ### Personas
 
-**Dylan — l'organisateur.** Crée les albums après chaque soirée, week-end ou voyage, et invite les autres. Veut que tout le monde poste sans qu'il ait à relancer ni à expliquer.
+**Dylan — l'organisateur.** Crée les événements après chaque soirée, week-end ou voyage, et invite les autres. Veut que tout le monde poste sans qu'il ait à relancer ni à expliquer.
 
-**Léa — la contributrice.** Prend plein de photos et de vidéos 4K avec son téléphone. Veut les balancer dans l'album en quelques secondes, en pleine qualité, sans trier sa galerie ni attendre devant l'écran.
+**Léa — la contributrice.** Prend plein de photos et de vidéos 4K avec son téléphone. Veut les balancer dans l'événement en quelques secondes, en pleine qualité, sans trier sa galerie ni attendre devant l'écran.
 
 **Max — le spectateur.** Poste peu mais regarde tout, réagit et commente. Ouvre l'app quand une notification lui dit qu'il y a du nouveau. Ne lira jamais un tutoriel.
 
@@ -45,12 +46,12 @@ Un groupe d'environ **10 potes**. Pas d'inscription publique : on n'entre que su
 
 Ces règles servent d'arbitre pour toutes les décisions de design :
 
-1. **Deux gestes maximum** pour les actions fréquentes : poster, réagir, ouvrir un album.
+1. **Deux gestes maximum** pour les actions fréquentes : poster, réagir, ouvrir un événement.
 2. **L'action principale est toujours visible.** Le bouton « ajouter » ne se cache jamais dans un menu « … ».
 3. **Rien à synchroniser.** On choisit ses photos, on les envoie, c'est tout.
 4. **Mobile d'abord.** Le desktop doit marcher, mais chaque écran est conçu pour un pouce.
-5. **Les photos sont les héroïnes.** L'interface s'efface : peu de texte, pas de bordures inutiles, du plein écran.
-6. **On voit que les autres sont là.** Activité, réactions, avatars : l'app doit donner envie de répondre.
+5. **Une app avec de la personnalité.** Ce n'est pas un outil : ton complice, micro-animations, petites surprises. Les photos restent au premier plan, mais l'app a du caractère.
+6. **On voit que les autres sont là.** Activité, réactions, avatars, profils : l'app doit donner envie de répondre et de revenir.
 7. **Jamais de perte.** Un envoi interrompu reprend où il en était, et l'original est conservé intact.
 
 ---
@@ -58,18 +59,19 @@ Ces règles servent d'arbitre pour toutes les décisions de design :
 ## 4. Parcours clés
 
 ### P1 — Rejoindre (premier contact)
-1. Dylan copie le **lien d'invitation** de l'album et l'envoie sur le groupe WhatsApp.
-2. Max clique : il voit la couverture de l'album, qui l'invite et combien de photos il contient.
-3. Il choisit un prénom, un avatar (facultatif) et un mot de passe. Il est dans l'album.
+1. Dylan copie le **lien d'invitation** de l'événement et l'envoie sur le groupe WhatsApp.
+2. Max clique : il voit la couverture de l'événement, qui l'invite et combien de photos il contient.
+3. Il choisit un prénom, un avatar (facultatif) et un mot de passe. Il est dans l'événement.
 4. L'app lui propose de **l'installer sur l'écran d'accueil**, puis d'**activer les notifications**.
 
 *Objectif : moins d'une minute, sans aucune explication.*
 
-### P2 — Poster des photos
-1. Léa ouvre l'album et appuie sur le gros bouton **+**.
+### P2 — Poster
+1. Léa appuie sur le gros bouton **+**, depuis le fil ou depuis un événement.
 2. Le sélecteur natif du téléphone s'ouvre. Elle coche 15 photos et 2 vidéos.
-3. Les vignettes apparaissent **immédiatement** dans l'album, avec une progression sur chacune.
-4. Elle peut fermer l'app : l'envoi continue autant que le système le permet, puis reprend à la prochaine ouverture.
+3. Elle ajoute une légende (facultative). L'événement est présélectionné : le dernier actif, ou celui depuis lequel elle a appuyé sur +.
+4. Elle publie : le post apparaît **immédiatement** dans le fil, avec une progression sur chaque média.
+5. Elle peut fermer l'app : l'envoi continue autant que le système le permet, puis reprend à la prochaine ouverture.
 
 ### P3 — Réagir
 - **Double-tap** sur une photo : ❤️.
@@ -79,7 +81,7 @@ Ces règles servent d'arbitre pour toutes les décisions de design :
 ### P4 — Être tenu au courant
 - Notification push : *« Léa a ajouté 17 photos dans Week-end Bretagne »*. Les envois sont regroupés : une seule notification par salve, pas 17.
 - Notification push : *« Max a réagi 😂 à ta photo »*, *« Max a commenté ta photo »*.
-- Écran **Activité** : fil chronologique de tout ce qui s'est passé dans mes albums.
+- Écran **Activité** : fil chronologique de tout ce qui s'est passé dans mes événements.
 
 ### P5 — Revoir et récupérer
 - Visionneuse plein écran : swipe entre photos, vidéos lues en streaming, zoom.
@@ -101,17 +103,41 @@ Priorisation MoSCoW : **M** = indispensable au MVP, **S** = juste après le MVP,
 | A5 | Connexion par passkey (Face ID / empreinte) | C |
 | A6 | Suppression de son compte et de ses données (RGPD) | S |
 
-### Albums
+### Événements (les « albums », permanents)
 | ID | Fonctionnalité | Prio |
 |---|---|---|
-| B1 | Créer un album : nom, c'est tout. La couverture est automatique (première photo) et modifiable. | M |
-| B2 | Liste de mes albums, triée par activité récente, avec un badge « nouveau » | M |
-| B3 | Lien d'invitation par album, régénérable / révocable | M |
+| B1 | Créer un événement : nom, et c'est tout. Date, lieu et couverture sont facultatifs (couverture automatique = première photo) | M |
+| B2 | Liste de mes événements, triée par activité récente, avec un badge « nouveau » | M |
+| B3 | Lien d'invitation par événement, régénérable / révocable | M |
 | B4 | Membres et rôles : admin, contributeur, lecteur (voir §6) | M |
-| B5 | Quitter un album | M |
-| B6 | Description, date et lieu de l'album (« événement ») | S |
-| B7 | Lien public en lecture seule, avec expiration | C |
-| B8 | Archiver / supprimer un album | S |
+| B5 | Quitter un événement | M |
+| B6 | Page événement : couverture, date, lieu, membres, stats (photos, réactions), onglets « posts » / « toutes les photos » | M |
+| B7 | « Les meilleurs » : les médias les plus réagis de l'événement | S |
+| B8 | Lien public en lecture seule, avec expiration | C |
+| B9 | Archiver / supprimer un événement | S |
+
+### Posts & fil
+| ID | Fonctionnalité | Prio |
+|---|---|---|
+| P1 | Un **post** = 1 à N photos/vidéos + une légende facultative, publié dans un événement | M |
+| P2 | **Fil** d'accueil : les posts récents de tous mes événements, du plus récent au plus ancien | M |
+| P3 | Carrousel dans un post (swipe), compteur « 1 / 6 » | M |
+| P4 | Modifier la légende, supprimer son post | M |
+| P5 | Publier hors événement, dans un fil « général » de la bande | S |
+
+### Profils
+| ID | Fonctionnalité | Prio |
+|---|---|---|
+| R1 | Profil de chaque pote : avatar, prénom, bio courte | M |
+| R2 | Grille de ses posts, événements en commun | M |
+| R3 | Stats fun du profil (nombre de posts, réactions reçues, emoji le plus reçu) | S |
+
+### Souvenirs & récaps
+| ID | Fonctionnalité | Prio |
+|---|---|---|
+| S1 | « Il y a 1 an aujourd'hui » : carte souvenir dans le fil, et notification | S |
+| S2 | Récap mensuel : le post le plus réagi, le plus actif, les chiffres du mois | C |
+| S3 | Récap annuel façon « Wrapped » de la bande | C |
 
 ### Médias
 | ID | Fonctionnalité | Prio |
@@ -126,25 +152,28 @@ Priorisation MoSCoW : **M** = indispensable au MVP, **S** = juste après le MVP,
 | C8 | Supprimer **ses propres** médias | M |
 | C9 | Tri chronologique par date de prise de vue (EXIF), pas par date d'envoi | M |
 | C10 | Détection des doublons à l'envoi | S |
-| C11 | Télécharger tout un album (zip) | S |
+| C11 | Télécharger tout un événement (zip) | S |
 | C12 | Envoi en arrière-plan avancé (Background Sync) | C |
 
 ### Social
 | ID | Fonctionnalité | Prio |
 |---|---|---|
-| D1 | Réactions emoji sur un média (une réaction par personne, modifiable) | M |
+| D1 | Réactions emoji sur un post ou un média (une réaction par personne, modifiable) | M |
 | D2 | Double-tap = ❤️ | M |
-| D3 | Commentaires sur un média | M |
+| D3 | Commentaires sur un post | M |
+| D9 | **Réactions perso de la bande** : emojis/stickers créés par le groupe à partir d'une photo (« Tom choqué »), utilisables comme réactions | S |
 | D4 | Mises à jour en temps réel (réactions, commentaires, nouvelles photos) sans recharger | M |
 | D5 | Fil d'activité global | M |
-| D6 | Notifications push regroupées, réglables par album | M |
+| D6 | Notifications push regroupées, réglables par événement | M |
 | D7 | Mentions @prénom dans les commentaires | C |
 | D8 | Réponses aux commentaires | C |
 
 ### Hors périmètre (W)
-- Synchronisation automatique de la galerie (c'est le rôle d'Immich / Google Photos)
+- Messagerie, chat de groupe ou messages privés (WhatsApp s'en charge)
+- Stories éphémères : tout ce qui est posté reste
+- Synchronisation automatique de la galerie (c'est le rôle de Google Photos & co)
 - Retouche photo, filtres
-- Réseau social public, découverte d'albums inconnus
+- Réseau social public, découverte d'événements inconnus
 - Applications natives sur les stores (la PWA suffit ; à réévaluer plus tard)
 
 ---
@@ -155,19 +184,19 @@ Priorisation MoSCoW : **M** = indispensable au MVP, **S** = juste après le MVP,
 
 | Action | Admin | Contributeur | Lecteur |
 |---|:---:|:---:|:---:|
-| Voir l'album, réagir, commenter | ✅ | ✅ | ✅ |
+| Voir l'événement, réagir, commenter | ✅ | ✅ | ✅ |
 | Ajouter des photos / vidéos | ✅ | ✅ | ❌ |
 | Supprimer **ses** médias | ✅ | ✅ | — |
 | Supprimer les médias **des autres** | ❌ *(à rediscuter)* | ❌ | ❌ |
 | Inviter (partager le lien) | ✅ | ✅ | ❌ |
 | Changer les rôles, retirer un membre | ✅ | ❌ | ❌ |
 | Renommer, changer la couverture | ✅ | ❌ | ❌ |
-| Supprimer l'album | ✅ (créateur) | ❌ | ❌ |
+| Supprimer l'événement | ✅ (créateur) | ❌ | ❌ |
 
-- Le créateur d'un album en est admin. Il peut nommer d'autres admins.
+- Le créateur d'un événement en est admin. Il peut nommer d'autres admins.
 - Rôle par défaut via le lien d'invitation : **contributeur**.
 - Un commentaire ne peut être supprimé que par son auteur.
-- Quand un membre quitte un album, ses photos y restent (décision à confirmer).
+- Quand un membre quitte un événement, ses photos y restent (décision à confirmer).
 
 ### Suppression
 - Seul l'auteur supprime ses médias (décision du 11/10/2026, à réévaluer à l'usage).
@@ -185,19 +214,19 @@ Priorisation MoSCoW : **M** = indispensable au MVP, **S** = juste après le MVP,
 - Les coordonnées GPS sont **retirées des versions affichées**, conservées dans l'original téléchargeable.
 
 ### Performance
-- Liste des albums et fil affichés en **< 1 s** en 4G (vignettes légères, chargement progressif).
+- Liste des événements et fil affichés en **< 1 s** en 4G (vignettes légères, chargement progressif).
 - Les vignettes d'une photo envoyée apparaissent localement **instantanément**, avant la fin de l'envoi.
 - Transcodage vidéo accéléré matériellement (Intel QuickSync du serveur).
 
 ### PWA
 - Installable sur iOS (16.4+) et Android, icône et écran de démarrage.
 - Notifications push (Web Push) sur les deux plateformes, une fois l'app installée.
-- Coquille de l'app disponible hors ligne ; consultation des albums déjà vus en cache (S).
+- Coquille de l'app disponible hors ligne ; consultation des événements déjà vus en cache (S).
 
 ### Sécurité & vie privée
 - Sessions par cookie `HttpOnly` / `Secure` / `SameSite` (pas de jeton dans le `localStorage`).
 - Mots de passe hachés (Argon2id), limitation de débit sur l'authentification.
-- Les médias ne sont **jamais** accessibles sans être membre de l'album (URLs signées ou contrôle d'accès à chaque requête).
+- Les médias ne sont **jamais** accessibles sans être membre de l'événement (URLs signées ou contrôle d'accès à chaque requête).
 - Aucun secret dans le dépôt Git (leçon de la v1).
 - RGPD : données minimales, hébergement en France, export et suppression de ses données, mentions légales.
 
@@ -275,15 +304,15 @@ Le serveur actuel (SSD 1 To partagé) tient plusieurs années. Les médias iront
 | Push iOS | Ne fonctionne que si l'app est installée sur l'écran d'accueil | Onboarding qui guide l'installation |
 | Suppression par l'admin | Faut-il permettre à l'admin de retirer une photo gênante ? | À trancher après les premiers usages |
 | Membre qui quitte | Ses photos restent-elles ? | Proposé : oui |
-| Stockage | SSD unique partagé avec Immich (quota 500 Go) | Dataset dédié + quota ; libérer Immich si abandonné |
+| Stockage | SSD unique de 1 To partagé avec les autres services du serveur | Dataset ZFS dédié avec quota |
 
 ---
 
 ## 12. Prochaines étapes
 
 1. ✅ Besoins (ce document) — **à valider**
-2. ⏳ Direction artistique : moodboard, palette, typographie, iconographie, ton, à partir de l'identité v1 (orange #F26522, turquoise #2BB4BB)
-3. ⏳ Maquettes : onboarding / invitation, liste des albums, album, envoi, visionneuse, activité, profil
+2. 🔄 Direction artistique : 4 pistes d'ambiance maquettées (chaleureux & décalé, argentique, bold / streetwear, moderne & vivant), choix en cours
+3. ⏳ Maquettes : onboarding / invitation, fil, liste des événements, page événement, création de post, visionneuse, activité, profil
 4. ⏳ Architecture détaillée : modèle de données, API, infra
 5. ⏳ Développement du MVP
 6. ⏳ Bêta avec le groupe, retours, itérations
