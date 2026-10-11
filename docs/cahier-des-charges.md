@@ -311,7 +311,7 @@ Le serveur actuel (SSD 1 To partagé) tient plusieurs années. Les médias iront
 ## 12. Prochaines étapes
 
 1. ✅ Besoins (ce document) — **à valider**
-2. 🔄 Direction artistique : 4 pistes d'ambiance maquettées (chaleureux & décalé, argentique, bold / streetwear, moderne & vivant), choix en cours
+2. ✅ Direction artistique : « argentique rangé », thèmes Lomo Purple (clair) et CineStill 800T (sombre), police Rubik — voir [direction-artistique.md](direction-artistique.md)
 3. ⏳ Maquettes : onboarding / invitation, fil, liste des événements, page événement, création de post, visionneuse, activité, profil
 4. ⏳ Architecture détaillée : modèle de données, API, infra
 5. ⏳ Développement du MVP

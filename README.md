@@ -11,3 +11,4 @@ Albums photo partagés entre potes : aussi simple que WhatsApp, avec la qualité
 ## Documentation
 
 - [Cahier des charges](docs/cahier-des-charges.md)
+- [Direction artistique](docs/direction-artistique.md) — tokens : [`design/tokens.css`](design/tokens.css)

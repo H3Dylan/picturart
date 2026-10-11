@@ -1,0 +1,130 @@
+/*
+ * Pictur'Art — design tokens
+ * Référence : docs/direction-artistique.md
+ *
+ * Thème clair « Lomo Purple » par défaut, thème sombre « CineStill 800T »
+ * selon le réglage du téléphone, ou forcé via <html data-theme="light|dark">.
+ */
+
+:root {
+  /* Typographie */
+  --font-sans: 'Rubik', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
+
+  /* Rayons */
+  --radius-xs: 4px;   /* chips, réactions */
+  --radius-sm: 6px;   /* onglets, planche contact, grilles */
+  --radius-md: 8px;   /* cartes, boutons */
+  --radius-lg: 12px;  /* nav flottante */
+
+  /* Espacements (base 4) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  --tap-min: 44px;
+  --icon-stroke: 1.8;
+}
+
+/* Lomo Purple — clair */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #EFE4E6;
+  --surface: #FFF9FA;
+  --border: #DCC8CD;
+  --border-strong: #CDB5BC;
+  --ink: #2B1B22;
+  --ink-muted: #6B5560;
+  --accent: #A63A5C;
+  --on-accent: #FFF9FA;
+  --accent-text: #9A3253;
+  --stamp: #FF8A2B;
+  --chip-active-bg: #2B1B22;
+  --chip-active-fg: #EFE4E6;
+  --reaction-1: #F6DCE3;
+  --reaction-2: #F3EAEC;
+  --comment-bg: #F6EDEF;
+  --memory-bg: #2B1B22;
+  --memory-fg: #EFE4E6;
+  --memory-label: #F0A3B8;
+  --nav-bg: #2B1B22;
+  --nav-icon: #B9A3AC;
+  --nav-active: #FFF9FA;
+  --film: #1E1418;
+  --sprocket: #EFE4E6;
+  --frame-number: #F0A3B8;
+}
+
+/* CineStill 800T — sombre */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #14161B;
+    --surface: #1E2229;
+    --border: #2C323C;
+    --border-strong: #3A414D;
+    --ink: #EFE8DC;
+    --ink-muted: #A0A7B2;
+    --accent: #C93C22;
+    --on-accent: #FFFFFF;
+    --accent-text: #FF7A5C;
+    --stamp: #FF6A3D;
+    --chip-active-bg: #EFE8DC;
+    --chip-active-fg: #14161B;
+    --reaction-1: #3A2420;
+    --reaction-2: #262B33;
+    --comment-bg: #262B33;
+    --memory-bg: #3A1F1A;
+    --memory-fg: #EFE8DC;
+    --memory-label: #FF8A5C;
+    --nav-bg: #232832;
+    --nav-icon: #8B93A0;
+    --nav-active: #FFFFFF;
+    --film: #08090B;
+    --sprocket: #3A414D;
+    --frame-number: #FF8A5C;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #14161B;
+  --surface: #1E2229;
+  --border: #2C323C;
+  --border-strong: #3A414D;
+  --ink: #EFE8DC;
+  --ink-muted: #A0A7B2;
+  --accent: #C93C22;
+  --on-accent: #FFFFFF;
+  --accent-text: #FF7A5C;
+  --stamp: #FF6A3D;
+  --chip-active-bg: #EFE8DC;
+  --chip-active-fg: #14161B;
+  --reaction-1: #3A2420;
+  --reaction-2: #262B33;
+  --comment-bg: #262B33;
+  --memory-bg: #3A1F1A;
+  --memory-fg: #EFE8DC;
+  --memory-label: #FF8A5C;
+  --nav-bg: #232832;
+  --nav-icon: #8B93A0;
+  --nav-active: #FFFFFF;
+  --film: #08090B;
+  --sprocket: #3A414D;
+  --frame-number: #FF8A5C;
+}
+
+/* Avatars : pastels fixes, texte toujours foncé */
+:root {
+  --avatar-fg: #2A2420;
+  --avatar-1: #B7CFC9; /* sauge */
+  --avatar-2: #E8C99B; /* sable */
+  --avatar-3: #E3B2A6; /* rose */
+  --avatar-4: #C3CBA4; /* olive */
+  --avatar-5: #C9BEDB; /* lilas */
+  --avatar-6: #A9C8DE; /* ciel */
+}
