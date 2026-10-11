@@ -12,3 +12,4 @@ Albums photo partagés entre potes : aussi simple que WhatsApp, avec la qualité
 
 - [Cahier des charges](docs/cahier-des-charges.md)
 - [Direction artistique](docs/direction-artistique.md) — tokens : [`design/tokens.css`](design/tokens.css)
+- [Maquettes v1](https://claude.ai/artifact/V3CSdGfjjonFEmnf31beMD) — 17 écrans cliquables, thèmes clair et sombre

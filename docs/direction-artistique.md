@@ -62,7 +62,7 @@ Chaque couleur a un **rôle** (token sémantique) ; le code n'utilise jamais une
 | Famille | Usage | Graisses |
 |---|---|---|
 | **Rubik** | Toute l'interface : titres et texte | 400, 500, 600, 700 |
-| **Space Mono** | Métadonnées « pellicule » : dates, numéros de pose, labels en capitales | 400, 700 |
+| **Space Mono** | Métadonnées « pellicule » **uniquement** : dates, numéros de pose, tampons, petits labels en capitales. Jamais pour un nom d'événement, un onglet ou un bouton. | 400, 700 |
 
 Les deux sont sur Google Fonts (licence libre), à auto-héberger dans l'app pour ne pas dépendre de Google.
 
@@ -77,10 +77,11 @@ Les deux sont sur Google Fonts (licence libre), à auto-héberger dans l'app pou
 | Chiffre de stat | Rubik | 28 / 1.05 | 700 | *612* |
 | Corps | Rubik | 15 / 1.45 | 400 | Légende d'un post |
 | Nom / label | Rubik | 15 / 1.3 | 600 | *Léa* |
+| Nom d'événement, onglet, chip | Rubik | 14 / 1.3 | 600 | *Anniv' de Tom* |
 | Secondaire | Rubik | 13–14 / 1.4 | 400 | *9 potes · 214 poses* |
 | Méta pellicule | Space Mono | 11–12, capitales, interlettrage 1,5–2 px | 400 | `12—14.07.2026 · QUIBERON` |
 | Tampon photo | Space Mono | 13, interlettrage 1 px | 700 | `'26 10 11` |
-| Bouton principal | Space Mono | 14, capitales, interlettrage 1 px | 700 | `DÉVELOPPER MES PHOTOS` |
+| Bouton principal | Rubik | 16 | 600 | *Développer mes photos* |
 
 ---
 
@@ -115,14 +116,14 @@ Les deux sont sur Google Fonts (licence libre), à auto-héberger dans l'app pou
 | Composant | Description |
 |---|---|
 | **Barre de nav flottante** | 5 entrées : Fil, Événements, **Poster** (rond, `--accent`, au centre), Activité, Profil. L'entrée active est blanche avec un point `--stamp` dessous. |
-| **Chip d'événement** | Raccourci en haut du fil, texte Space Mono capitales. Actif : `--chip-active-bg`. |
+| **Chip d'événement** | Raccourci en haut du fil, texte Rubik 600. Actif : `--chip-active-bg`. |
 | **Carte post** | Avatar + « Léa a posté 6 photos » + méta (événement · heure) ; grille médias (1 grande + petites, « +N ») ; légende ; réactions ; aperçu du dernier commentaire. |
 | **Grille médias** | 1 photo : pleine largeur. 2 : côte à côte. 3 et + : une grande à gauche, deux petites à droite, la dernière affiche « +N ». Tampon de date sur la grande. |
 | **Pastille de réaction** | Emoji + compteur. Réaction perso de la bande : fond `--ink`, vignette carrée + nom (« Tom choqué 5 »). Bouton « + » en pointillés pour réagir. |
 | **Carte souvenir** | Fond `--memory-bg`, vignette, label Space Mono « IL Y A 1 AN · date », titre Rubik. |
 | **Onglets segmentés** | Encadré `--border-strong`, onglet actif plein. Événement : *Planche*, *Posts*, *★ Meilleures*. |
 | **Planche contact** | Fond `--film`, perforations en haut et en bas, grille 3 colonnes, numéros de pose (14, 14A…), la préférée cerclée `--stamp` avec ★. Vidéos : icône lecture + durée. |
-| **Bouton principal** | Pleine largeur, `--accent`, icône + texte Space Mono capitales. |
+| **Bouton principal** | Pleine largeur, `--accent`, icône + texte Rubik 600. |
 | **Pile d'avatars** | Avatars de 30 px qui se chevauchent de 8 px, bordure de la couleur du fond. |
 | **Bloc stats** | Carte en 3 colonnes séparées par des filets : chiffre Rubik 700 + label Space Mono. |
 
