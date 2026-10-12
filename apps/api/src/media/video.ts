@@ -122,6 +122,9 @@ export function transcodeArgs(
   const colour = [probe.hdr ? TONEMAP : null, rotationFilter(probe.rotation)].filter(
     (filter): filter is string => filter !== null,
   );
+  // La rotation est appliquée par le filtre transpose : la matrice d'affichage d'origine est
+  // neutralisée, sinon ffmpeg 6 la recopie dans la sortie et les lecteurs tourneraient deux fois
+  const inputArgs = ['-noautorotate', '-display_rotation', '0', '-i', input];
   const common = [
     ...['-map', '0:v:0', '-map', '0:a:0?'],
     // Aucune métadonnée recopiée dans la version de lecture (position GPS des iPhone)
@@ -147,7 +150,7 @@ export function transcodeArgs(
       ...['-hide_banner', '-loglevel', 'error', '-y'],
       ...['-init_hw_device', `vaapi=va:${device}`, '-filter_hw_device', 'va'],
       ...['-hwaccel', 'vaapi', '-hwaccel_device', 'va', '-hwaccel_output_format', 'vaapi'],
-      ...['-noautorotate', '-i', input],
+      ...inputArgs,
       ...['-vf', filters.join(',')],
       ...['-c:v', 'h264_vaapi', '-profile:v', 'high', '-qp', '23'],
       ...common,
@@ -157,7 +160,7 @@ export function transcodeArgs(
   const filters = [`scale=${size.codedWidth}:${size.codedHeight}`, ...colour, 'format=yuv420p'];
   return [
     ...['-hide_banner', '-loglevel', 'error', '-y'],
-    ...['-noautorotate', '-i', input],
+    ...inputArgs,
     ...['-vf', filters.join(',')],
     ...['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-profile:v', 'high'],
     ...common,
