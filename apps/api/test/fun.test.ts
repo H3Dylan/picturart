@@ -145,7 +145,7 @@ describe('M6 : réactions perso, souvenirs, profils', () => {
       const reacted = await call('dylan', 'PUT', `/api/v1/posts/${leaPost.id}/reaction`, {
         emoji: tom.key,
       });
-      expect(reacted.json()).toEqual({ counts: [{ emoji: tom.key, count: 1 }], mine: tom.key });
+      expect(reacted.json()).toEqual({ counts: [{ emoji: tom.key, count: 1 }], mine: [tom.key] });
       expect(
         (
           await call('dylan', 'PUT', `/api/v1/posts/${leaPost.id}/reaction`, {
@@ -153,6 +153,18 @@ describe('M6 : réactions perso, souvenirs, profils', () => {
           })
         ).statusCode,
       ).toBe(400);
+
+      // Six réactions au plus par personne : les 6 emojis + la réaction perso font 7
+      for (const emoji of ['❤️', '😂', '🔥', '😍', '😮']) {
+        await call('dylan', 'PUT', `/api/v1/posts/${leaPost.id}/reaction`, { emoji });
+      }
+      const seventh = await call('dylan', 'PUT', `/api/v1/posts/${leaPost.id}/reaction`, {
+        emoji: '👏',
+      });
+      expect(seventh.statusCode).toBe(409);
+      for (const emoji of ['❤️', '😂', '🔥', '😍', '😮']) {
+        await call('dylan', 'DELETE', `/api/v1/posts/${leaPost.id}/reaction`, { emoji });
+      }
 
       const activity: NotificationsPage = (
         await call('lea', 'GET', '/api/v1/notifications')

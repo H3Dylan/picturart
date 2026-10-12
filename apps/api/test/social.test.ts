@@ -69,22 +69,25 @@ describe('social : fil, réactions, commentaires, planche, temps réel', () => {
   afterAll(() => t.close());
 
   describe('réactions sur un post', () => {
-    it('ajoute, cumule, change puis retire une réaction', async () => {
-      let r = (
-        await call('lea', 'PUT', `/api/v1/posts/${post.id}/reaction`, { emoji: '❤️' })
-      ).json();
-      expect(r).toEqual({ counts: [{ emoji: '❤️', count: 1 }], mine: '❤️' });
+    it('plusieurs réactions par personne, chaque emoji une fois, retirées une à une', async () => {
+      const put = (who: string, emoji: string) =>
+        call(who, 'PUT', `/api/v1/posts/${post.id}/reaction`, { emoji });
+      let r = (await put('lea', '❤️')).json();
+      expect(r).toEqual({ counts: [{ emoji: '❤️', count: 1 }], mine: ['❤️'] });
 
-      r = (await call('dylan', 'PUT', `/api/v1/posts/${post.id}/reaction`, { emoji: '😂' })).json();
-      expect(r.counts).toHaveLength(2);
-      expect(r.mine).toBe('😂');
+      // Léa ajoute 😂 en plus, Dylan aussi ; reposer ❤️ ne double rien
+      await put('lea', '😂');
+      await put('lea', '❤️');
+      r = (await put('dylan', '😂')).json();
+      expect(r.counts).toEqual([
+        { emoji: '😂', count: 2 },
+        { emoji: '❤️', count: 1 },
+      ]);
+      expect(r.mine).toEqual(['😂']);
 
-      // Une seule réaction par personne : Léa change d'avis
-      r = (await call('lea', 'PUT', `/api/v1/posts/${post.id}/reaction`, { emoji: '😂' })).json();
-      expect(r).toEqual({ counts: [{ emoji: '😂', count: 2 }], mine: '😂' });
-
-      r = (await call('lea', 'DELETE', `/api/v1/posts/${post.id}/reaction`)).json();
-      expect(r).toEqual({ counts: [{ emoji: '😂', count: 1 }], mine: null });
+      // Retirer ❤️ garde 😂
+      r = (await call('lea', 'DELETE', `/api/v1/posts/${post.id}/reaction`, { emoji: '❤️' })).json();
+      expect(r).toEqual({ counts: [{ emoji: '😂', count: 2 }], mine: ['😂'] });
     });
 
     it('refuse un emoji hors liste et les non-membres', async () => {
@@ -102,11 +105,11 @@ describe('social : fil, réactions, commentaires, planche, temps réel', () => {
     const r = (
       await call('dylan', 'PUT', `/api/v1/media/${mediaId}/reaction`, { emoji: '🔥' })
     ).json();
-    expect(r).toEqual({ counts: [{ emoji: '🔥', count: 1 }], mine: '🔥' });
+    expect(r).toEqual({ counts: [{ emoji: '🔥', count: 1 }], mine: ['🔥'] });
     const reloaded: PostDto = (await call('lea', 'GET', `/api/v1/posts/${post.id}`)).json();
     expect(reloaded.media[1]?.reactions).toEqual({
       counts: [{ emoji: '🔥', count: 1 }],
-      mine: null,
+      mine: [],
     });
   });
 

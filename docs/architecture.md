@@ -135,13 +135,13 @@ erDiagram
 | `posts` | `id`, `event_id`, `author_id`, `caption`, `created_at`, `updated_at`, `deleted_at` | `deleted_at` = corbeille 30 jours |
 | `media` | `id`, `post_id`, `uploader_id`, `kind` (`photo`/`video`), `status` (`uploading`/`processing`/`ready`/`failed`), `position`, `original_path`, `mime`, `size_bytes`, `sha256`, `width`, `height`, `duration_ms`, `taken_at`, `deleted_at` | `taken_at` (EXIF) trie la planche contact |
 | `media_variants` | `media_id`, `variant` (`thumb`/`display`/`video`/`poster`), `path`, `width`, `height`, `size_bytes` | |
-| `reactions` | `id`, `user_id`, `post_id` *ou* `media_id`, `emoji` *ou* `custom_reaction_id`, `created_at` | Une réaction par personne et par cible |
+| `post_reactions` / `media_reactions` | `post_id` *ou* `media_id`, `user_id`, `emoji` (emoji ou `custom:<id>`), `created_at` | Plusieurs réactions par personne (6 au plus), chaque emoji une fois — demandé pendant la bêta |
 | `custom_reactions` | `id`, `name`, `image_path`, `created_by`, `source_media_id`, `created_at` | « Tom choqué » ; utilisée via la clé `custom:<id>` dans `post_reactions` / `media_reactions` |
 | `comments` | `id`, `post_id`, `author_id`, `body`, `created_at`, `edited_at`, `deleted_at` | |
 | `notifications` | `id`, `user_id`, `type`, `payload` (JSONB), `read_at`, `created_at` | Alimente l'écran Activité |
 | `push_subscriptions` | `id`, `user_id`, `endpoint`, `p256dh`, `auth`, `created_at` | Un abonnement par appareil |
 
-**Règles clés en base** : unicité `(user_id, post_id)` et `(user_id, media_id)` sur les réactions, clés étrangères en cascade sur les membres, index sur `(event_id, created_at)` pour le fil.
+**Règles clés en base** : clé `(post_id, user_id, emoji)` et `(media_id, user_id, emoji)` sur les réactions, clés étrangères en cascade sur les membres, index sur `(event_id, created_at)` pour le fil.
 
 ---
 

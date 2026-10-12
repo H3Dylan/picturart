@@ -155,3 +155,15 @@
   white-space: nowrap;
   font-size: 13px;
 }
+
+.full {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.choice:disabled,
+.customChoice:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

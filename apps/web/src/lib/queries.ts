@@ -122,10 +122,10 @@ export function useReact(target: {
 }) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (emoji: ReactionKey | null) =>
+    mutationFn: ({ emoji, on }: { emoji: ReactionKey; on: boolean }) =>
       api<Reactions>(`/${target.kind === 'post' ? 'posts' : 'media'}/${target.id}/reaction`, {
-        method: emoji ? 'PUT' : 'DELETE',
-        ...(emoji && { body: { emoji } }),
+        method: on ? 'PUT' : 'DELETE',
+        body: { emoji },
       }),
     onSettled: () => {
       client.invalidateQueries({ queryKey: keys.post(target.postId) });

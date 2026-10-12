@@ -39,14 +39,14 @@ export function PostCard({ post, isAuthor, onDelete, deleting, showEvent = false
     setReactions(post.reactions);
   }
 
-  function onReact(emoji: ReactionKey | null) {
-    setReactions((current) => applyReaction(current, emoji));
-    react.mutate(emoji, { onSuccess: setReactions });
+  function onReact(emoji: ReactionKey, on: boolean) {
+    setReactions((current) => applyReaction(current, emoji, on));
+    react.mutate({ emoji, on }, { onSuccess: setReactions });
   }
 
   function like() {
     setHeart((n) => n + 1);
-    if (reactions.mine !== '❤️') onReact('❤️');
+    if (!reactions.mine.includes('❤️')) onReact('❤️', true);
   }
 
   return (

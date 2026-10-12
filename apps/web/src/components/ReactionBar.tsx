@@ -2,6 +2,7 @@ import {
   customReactionId,
   customReactionImageUrl,
   isCustomReaction,
+  MAX_REACTIONS_PER_PERSON,
   REACTION_EMOJIS,
   type ReactionKey,
   type Reactions,
@@ -13,18 +14,20 @@ import styles from './ReactionBar.module.css';
 
 interface ReactionBarProps {
   reactions: Reactions;
-  onReact: (key: ReactionKey | null) => void;
+  /** Ajoute (`on`) ou retire une de ses réactions. */
+  onReact: (key: ReactionKey, on: boolean) => void;
   /** Variante claire sur fond sombre (visionneuse). */
   onDark?: boolean;
 }
 
 /** Applique localement une réaction, pour un retour immédiat avant la réponse du serveur. */
-export function applyReaction(current: Reactions, key: ReactionKey | null): Reactions {
+export function applyReaction(current: Reactions, key: ReactionKey, on: boolean): Reactions {
+  const has = current.mine.includes(key);
+  if (has === on) return current;
   const counts = new Map(current.counts.map((c) => [c.emoji, c.count]));
-  if (current.mine) counts.set(current.mine, (counts.get(current.mine) ?? 1) - 1);
-  if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+  counts.set(key, (counts.get(key) ?? 0) + (on ? 1 : -1));
   return {
-    mine: key,
+    mine: on ? [...current.mine, key] : current.mine.filter((k) => k !== key),
     counts: [...counts]
       .filter(([, count]) => count > 0)
       .map(([emoji, count]) => ({ emoji, count }))
@@ -60,16 +63,21 @@ export function ReactionBar({ reactions, onReact, onDark = false }: ReactionBarP
   const nameOf = useReactionName();
   useEffect(() => setLocal(reactions), [reactions]);
 
-  function react(key: ReactionKey | null) {
-    setLocal((current) => applyReaction(current, key));
+  const full = local.mine.length >= MAX_REACTIONS_PER_PERSON;
+
+  /** Une réaction se pose ou se retire d'un appui ; on peut en cumuler plusieurs. */
+  function toggle(key: ReactionKey) {
+    const on = !local.mine.includes(key);
+    if (on && full) return;
+    setLocal((current) => applyReaction(current, key, on));
     setPicking(false);
-    onReact(key);
+    onReact(key, on);
   }
 
   return (
     <div className={`${styles.bar} ${onDark ? styles.dark : ''}`}>
       {local.counts.map(({ emoji, count }) => {
-        const mine = local.mine === emoji;
+        const mine = local.mine.includes(emoji);
         const custom = isCustomReaction(emoji);
         return (
           <button
@@ -79,7 +87,7 @@ export function ReactionBar({ reactions, onReact, onDark = false }: ReactionBarP
             aria-pressed={mine}
             aria-label={`${nameOf(emoji)} ${count}${mine ? ', ta réaction (retirer)' : ''}`}
             title={custom ? nameOf(emoji) : undefined}
-            onClick={() => react(mine ? null : emoji)}
+            onClick={() => toggle(emoji)}
           >
             <ReactionGlyph reaction={emoji} size={24} />
             {custom && <span className={styles.customName}>{nameOf(emoji)}</span>} {count}
@@ -98,14 +106,22 @@ export function ReactionBar({ reactions, onReact, onDark = false }: ReactionBarP
       {picking && (
         <fieldset className={styles.picker}>
           <legend className={styles.legend}>Choisir une réaction</legend>
+          {full && (
+            <p className={styles.full}>
+              {MAX_REACTIONS_PER_PERSON} réactions au plus : retires-en une pour en mettre une
+              autre.
+            </p>
+          )}
           <div className={styles.emojis}>
             {REACTION_EMOJIS.map((emoji) => (
               <button
                 key={emoji}
                 type="button"
-                className={`${styles.choice} ${local.mine === emoji ? styles.chosen : ''}`}
-                onClick={() => react(local.mine === emoji ? null : emoji)}
+                className={`${styles.choice} ${local.mine.includes(emoji) ? styles.chosen : ''}`}
+                onClick={() => toggle(emoji)}
                 aria-label={emoji}
+                aria-pressed={local.mine.includes(emoji)}
+                disabled={full && !local.mine.includes(emoji)}
               >
                 {emoji}
               </button>
@@ -117,9 +133,11 @@ export function ReactionBar({ reactions, onReact, onDark = false }: ReactionBarP
                 <button
                   key={c.id}
                   type="button"
-                  className={`${styles.customChoice} ${local.mine === c.key ? styles.chosen : ''}`}
-                  onClick={() => react(local.mine === c.key ? null : c.key)}
+                  className={`${styles.customChoice} ${local.mine.includes(c.key) ? styles.chosen : ''}`}
+                  onClick={() => toggle(c.key)}
                   aria-label={c.name}
+                  aria-pressed={local.mine.includes(c.key)}
+                  disabled={full && !local.mine.includes(c.key)}
                   title={c.name}
                 >
                   <ReactionGlyph reaction={c.key} size={40} />

@@ -204,10 +204,10 @@ export const postReactions = pgTable(
     emoji: text('emoji').notNull(),
     createdAt: createdAt(),
   },
-  (t) => [primaryKey({ columns: [t.postId, t.userId] })],
+  (t) => [primaryKey({ columns: [t.postId, t.userId, t.emoji] })],
 );
 
-/** Une réaction par personne et par photo. */
+/** Réactions sur une photo : plusieurs par personne, une seule fois chaque emoji. */
 export const mediaReactions = pgTable(
   'media_reactions',
   {
@@ -220,7 +220,7 @@ export const mediaReactions = pgTable(
     emoji: text('emoji').notNull(),
     createdAt: createdAt(),
   },
-  (t) => [primaryKey({ columns: [t.mediaId, t.userId] })],
+  (t) => [primaryKey({ columns: [t.mediaId, t.userId, t.emoji] })],
 );
 
 export const comments = pgTable(

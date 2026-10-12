@@ -35,10 +35,13 @@ export interface ReactionCount {
   count: number;
 }
 
-/** Réactions d'un post ou d'une photo, avec celle de l'utilisateur connecté. */
+/** Plusieurs réactions par personne et par post ou photo, dans cette limite. */
+export const MAX_REACTIONS_PER_PERSON = 6;
+
+/** Réactions d'un post ou d'une photo, avec celles de l'utilisateur connecté. */
 export interface Reactions {
   counts: ReactionCount[];
-  mine: ReactionKey | null;
+  mine: ReactionKey[];
 }
 
 export interface CommentDto {

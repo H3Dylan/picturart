@@ -37,7 +37,7 @@ function groupReactions(
   const get = (target: string) => {
     let entry = byTarget.get(target);
     if (!entry) {
-      entry = { counts: [], mine: null };
+      entry = { counts: [], mine: [] };
       byTarget.set(target, entry);
     }
     return entry;
@@ -45,12 +45,12 @@ function groupReactions(
   for (const row of rows) {
     get(row.target).counts.push({ emoji: row.emoji as ReactionKey, count: Number(row.total) });
   }
-  for (const row of mine) get(row.target).mine = row.emoji as ReactionKey;
+  for (const row of mine) get(row.target).mine.push(row.emoji as ReactionKey);
   for (const entry of byTarget.values()) entry.counts.sort((a, b) => b.count - a.count);
   return byTarget;
 }
 
-const noReactions = (): Reactions => ({ counts: [], mine: null });
+const noReactions = (): Reactions => ({ counts: [], mine: [] });
 
 /** Charge les posts avec auteur, événement, médias, réactions et commentaires, dans l'ordre donné. */
 export async function loadPosts(db: Db, postIds: string[], userId: string): Promise<PostDto[]> {

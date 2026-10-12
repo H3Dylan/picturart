@@ -77,12 +77,9 @@ export class Notifier {
     return post;
   }
 
-  /**
-   * Réaction à un post ou à une photo : l'auteur du post est prévenu. Changer d'emoji
-   * remplace la notification précédente au lieu d'en empiler une nouvelle.
-   */
+  /** Réaction à un post ou à une photo : l'auteur du post est prévenu, une fois par emoji. */
   async reacted(actorId: string, postId: string, mediaId: string | null, emoji: string) {
-    await this.unreacted(actorId, postId, mediaId);
+    await this.unreacted(actorId, postId, mediaId, emoji);
     const post = await this.#postAuthor(postId);
     if (!post || post.authorId === actorId) return;
     await this.#insert([
@@ -98,7 +95,7 @@ export class Notifier {
     ]);
   }
 
-  async unreacted(actorId: string, postId: string, mediaId: string | null) {
+  async unreacted(actorId: string, postId: string, mediaId: string | null, emoji: string) {
     await this.#db
       .delete(notifications)
       .where(
@@ -107,6 +104,7 @@ export class Notifier {
           eq(notifications.actorId, actorId),
           eq(notifications.postId, postId),
           mediaId ? eq(notifications.mediaId, mediaId) : isNull(notifications.mediaId),
+          eq(notifications.emoji, emoji),
         ),
       );
   }

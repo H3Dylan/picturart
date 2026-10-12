@@ -43,6 +43,13 @@
       "when": 1791823574082,
       "tag": "0005_nasty_violations",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791842952805,
+      "tag": "0006_mean_boomer",
+      "breakpoints": true
     }
   ]
 }

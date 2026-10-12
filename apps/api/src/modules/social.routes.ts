@@ -1,10 +1,12 @@
 import {
   type CommentDto,
   commentSchema,
+  MAX_REACTIONS_PER_PERSON,
   type PlancheItem,
+  type ReactionKey,
   reactionSchema,
 } from '@picturart/shared';
-import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNull, type SQL, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { requireUser } from '../auth/plugin.ts';
 import type { Db } from '../db/client.ts';
@@ -33,40 +35,79 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
     return row;
   }
 
-  // ---- Réactions sur un post ----------------------------------------------------------
+  // ---- Réactions : plusieurs par personne, chaque emoji une seule fois ----------------
+  /** Vérifie la clé et la limite, puis ajoute la réaction (sans effet si elle y est déjà). */
+  async function addReaction(
+    table: typeof postReactions | typeof mediaReactions,
+    target: SQL,
+    values: { userId: string; emoji: ReactionKey } & ({ postId: string } | { mediaId: string }),
+  ) {
+    if (!(await reactionExists(db, values.emoji))) {
+      throw new HttpError(400, 'validation', 'Cette réaction perso n’existe plus.');
+    }
+    const [mine] = await db
+      .select({ total: count() })
+      .from(table)
+      .where(and(target, eq(table.userId, values.userId)));
+    const already = await db
+      .select({ emoji: table.emoji })
+      .from(table)
+      .where(and(target, eq(table.userId, values.userId), eq(table.emoji, values.emoji)))
+      .limit(1);
+    if (already.length > 0) return false;
+    if (Number(mine?.total ?? 0) >= MAX_REACTIONS_PER_PERSON) {
+      throw new HttpError(
+        409,
+        'validation',
+        `${MAX_REACTIONS_PER_PERSON} réactions maximum par personne : retires-en une d’abord.`,
+      );
+    }
+    await db
+      .insert(table)
+      .values(values as typeof postReactions.$inferInsert & typeof mediaReactions.$inferInsert)
+      .onConflictDoNothing();
+    return true;
+  }
+
+  // ---- Sur un post ----
   app.put<{ Params: { id: string } }>('/api/v1/posts/:id/reaction', async (request) => {
     const user = requireUser(request);
     const { post } = await findVisiblePost(db, request.params.id, user.id);
     const { emoji } = parse(reactionSchema, request.body);
-    if (!(await reactionExists(db, emoji))) {
-      throw new HttpError(400, 'validation', 'Cette réaction perso n’existe plus.');
+    const added = await addReaction(postReactions, eq(postReactions.postId, post.id), {
+      postId: post.id,
+      userId: user.id,
+      emoji,
+    });
+    if (added) {
+      void hub.publish({ type: 'reaction.updated', eventId: post.eventId, postId: post.id });
+      await quietly(app.notifier.reacted(user.id, post.id, null, emoji), request.log);
     }
-    await db
-      .insert(postReactions)
-      .values({ postId: post.id, userId: user.id, emoji })
-      .onConflictDoUpdate({
-        target: [postReactions.postId, postReactions.userId],
-        set: { emoji, createdAt: new Date() },
-      });
-    void hub.publish({ type: 'reaction.updated', eventId: post.eventId, postId: post.id });
-    await quietly(app.notifier.reacted(user.id, post.id, null, emoji), request.log);
     const [dto] = await loadPosts(db, [post.id], user.id);
     return dto?.reactions;
   });
 
+  /** Retire une de ses réactions (celle de `emoji`). */
   app.delete<{ Params: { id: string } }>('/api/v1/posts/:id/reaction', async (request) => {
     const user = requireUser(request);
     const { post } = await findVisiblePost(db, request.params.id, user.id);
+    const { emoji } = parse(reactionSchema, request.body);
     await db
       .delete(postReactions)
-      .where(and(eq(postReactions.postId, post.id), eq(postReactions.userId, user.id)));
+      .where(
+        and(
+          eq(postReactions.postId, post.id),
+          eq(postReactions.userId, user.id),
+          eq(postReactions.emoji, emoji),
+        ),
+      );
     void hub.publish({ type: 'reaction.updated', eventId: post.eventId, postId: post.id });
-    await quietly(app.notifier.unreacted(user.id, post.id, null), request.log);
+    await quietly(app.notifier.unreacted(user.id, post.id, null, emoji), request.log);
     const [dto] = await loadPosts(db, [post.id], user.id);
     return dto?.reactions;
   });
 
-  // ---- Réactions sur une photo --------------------------------------------------------
+  // ---- Sur une photo ----
   async function mediaReactionsOf(postId: string, mediaId: string, userId: string) {
     const [dto] = await loadPosts(db, [postId], userId);
     return dto?.media.find((m) => m.id === mediaId)?.reactions;
@@ -76,29 +117,33 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
     const user = requireUser(request);
     const row = await findVisibleMedia(request.params.id, user.id);
     const { emoji } = parse(reactionSchema, request.body);
-    if (!(await reactionExists(db, emoji))) {
-      throw new HttpError(400, 'validation', 'Cette réaction perso n’existe plus.');
+    const added = await addReaction(mediaReactions, eq(mediaReactions.mediaId, row.mediaId), {
+      mediaId: row.mediaId,
+      userId: user.id,
+      emoji,
+    });
+    if (added) {
+      void hub.publish({ type: 'reaction.updated', ...row });
+      await quietly(app.notifier.reacted(user.id, row.postId, row.mediaId, emoji), request.log);
     }
-    await db
-      .insert(mediaReactions)
-      .values({ mediaId: row.mediaId, userId: user.id, emoji })
-      .onConflictDoUpdate({
-        target: [mediaReactions.mediaId, mediaReactions.userId],
-        set: { emoji, createdAt: new Date() },
-      });
-    void hub.publish({ type: 'reaction.updated', ...row });
-    await quietly(app.notifier.reacted(user.id, row.postId, row.mediaId, emoji), request.log);
     return mediaReactionsOf(row.postId, row.mediaId, user.id);
   });
 
   app.delete<{ Params: { id: string } }>('/api/v1/media/:id/reaction', async (request) => {
     const user = requireUser(request);
     const row = await findVisibleMedia(request.params.id, user.id);
+    const { emoji } = parse(reactionSchema, request.body);
     await db
       .delete(mediaReactions)
-      .where(and(eq(mediaReactions.mediaId, row.mediaId), eq(mediaReactions.userId, user.id)));
+      .where(
+        and(
+          eq(mediaReactions.mediaId, row.mediaId),
+          eq(mediaReactions.userId, user.id),
+          eq(mediaReactions.emoji, emoji),
+        ),
+      );
     void hub.publish({ type: 'reaction.updated', ...row });
-    await quietly(app.notifier.unreacted(user.id, row.postId, row.mediaId), request.log);
+    await quietly(app.notifier.unreacted(user.id, row.postId, row.mediaId, emoji), request.log);
     return mediaReactionsOf(row.postId, row.mediaId, user.id);
   });
 

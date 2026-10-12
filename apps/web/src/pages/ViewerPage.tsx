@@ -124,16 +124,16 @@ function Viewer({ items, index, loading, hrefFor }: ViewerProps) {
     }
   }, [items, index]);
 
-  function onReact(emoji: ReactionKey | null) {
-    setReactions((r) => (r ? applyReaction(r, emoji) : r));
-    react.mutate(emoji, { onSuccess: setReactions });
+  function onReact(emoji: ReactionKey, on: boolean) {
+    setReactions((r) => (r ? applyReaction(r, emoji, on) : r));
+    react.mutate({ emoji, on }, { onSuccess: setReactions });
   }
 
   const tap = useDoubleTap(
     () => {},
     () => {
       setHeart((n) => n + 1);
-      if (reactions?.mine !== '❤️') onReact('❤️');
+      if (reactions && !reactions.mine.includes('❤️')) onReact('❤️', true);
     },
   );
 

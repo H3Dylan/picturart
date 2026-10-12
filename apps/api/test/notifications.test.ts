@@ -149,19 +149,18 @@ describe('notifications : écran Activité, préférences et push', () => {
     expect((await activity('lea')).items.some((n) => n.type === 'post')).toBe(false);
   });
 
-  it('une réaction prévient l’auteur ; changer d’emoji remplace, retirer efface', async () => {
+  it('chaque réaction prévient l’auteur ; en retirer une efface sa notification', async () => {
     const reactions = async () =>
-      (await activity('lea')).items.filter((n) => n.type === 'reaction');
-    await call('dylan', 'PUT', `/api/v1/posts/${lea.id}/reaction`, { emoji: '❤️' });
-    await call('dylan', 'PUT', `/api/v1/posts/${lea.id}/reaction`, { emoji: '😂' });
-    expect(await reactions()).toEqual([
-      expect.objectContaining({
-        emoji: '😂',
-        target: 'post',
-        actor: expect.objectContaining({ displayName: 'Dylan' }),
-      }),
-    ]);
-    await call('dylan', 'DELETE', `/api/v1/posts/${lea.id}/reaction`);
+      (await activity('lea')).items.filter((n) => n.type === 'reaction').map((n) => n.emoji);
+    const put = (emoji: string) =>
+      call('dylan', 'PUT', `/api/v1/posts/${lea.id}/reaction`, { emoji });
+    await put('❤️');
+    await put('😂');
+    await put('😂'); // déjà posée : pas de seconde notification
+    expect(await reactions()).toEqual(['😂', '❤️']);
+    await call('dylan', 'DELETE', `/api/v1/posts/${lea.id}/reaction`, { emoji: '❤️' });
+    expect(await reactions()).toEqual(['😂']);
+    await call('dylan', 'DELETE', `/api/v1/posts/${lea.id}/reaction`, { emoji: '😂' });
     expect(await reactions()).toEqual([]);
 
     // Réagir à son propre post ne notifie personne

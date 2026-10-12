@@ -88,6 +88,7 @@ export {
   customReactionId,
   customReactionKey,
   isCustomReaction,
+  MAX_REACTIONS_PER_PERSON,
   type PlancheItem,
   REACTION_EMOJIS,
   type ReactionCount,
