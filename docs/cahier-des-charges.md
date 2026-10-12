@@ -313,6 +313,6 @@ Le serveur actuel (SSD 1 To partagé) tient plusieurs années. Les médias iront
 1. ✅ Besoins (ce document) — **à valider**
 2. ✅ Direction artistique : « argentique rangé », thèmes Lomo Purple (clair) et CineStill 800T (sombre), police Rubik — voir [direction-artistique.md](direction-artistique.md)
 3. ✅ Maquettes v1 : 17 écrans cliquables en clair et sombre (arrivée, fil & posts, événements, activité & profil) — [canvas des maquettes](https://claude.ai/artifact/V3CSdGfjjonFEmnf31beMD)
-4. ⏳ Architecture détaillée : modèle de données, API, infra
+4. 🔄 Architecture : [architecture.md](architecture.md) — à valider
 5. ⏳ Développement du MVP
 6. ⏳ Bêta avec le groupe, retours, itérations
