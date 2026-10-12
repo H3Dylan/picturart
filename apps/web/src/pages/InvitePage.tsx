@@ -38,7 +38,7 @@ export function InvitePage() {
   const meta = [dates, event.location].filter(Boolean).join(' · ');
 
   function join() {
-    accept.mutate(undefined, { onSuccess: () => navigate('/evenements') });
+    accept.mutate(undefined, { onSuccess: ({ eventId }) => navigate(`/evenements/${eventId}`) });
   }
 
   return (

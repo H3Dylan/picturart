@@ -36,3 +36,9 @@
   background: var(--chip-active-bg);
   color: var(--chip-active-fg);
 }
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

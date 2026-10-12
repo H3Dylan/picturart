@@ -1,9 +1,12 @@
+import { DEFAULT_NOTIFICATION_PREFS, type NotificationPrefs } from '@picturart/shared';
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -24,6 +27,12 @@ export const mediaStatusEnum = pgEnum('media_status', [
   'ready',
   'failed',
 ]);
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'post',
+  'reaction',
+  'comment',
+  'member',
+]);
 export const variantEnum = pgEnum('media_variant', ['thumb', 'display', 'video']);
 
 export const users = pgTable('users', {
@@ -34,6 +43,10 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   bio: text('bio').notNull().default(''),
   theme: themeEnum('theme').notNull().default('auto'),
+  notificationPrefs: jsonb('notification_prefs')
+    .$type<NotificationPrefs>()
+    .notNull()
+    .default(DEFAULT_NOTIFICATION_PREFS),
   createdAt: createdAt(),
 });
 
@@ -79,6 +92,8 @@ export const eventMembers = pgTable(
     role: roleEnum('role').notNull(),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+    /** Notifications push coupées pour cet événement. */
+    muted: boolean('muted').notNull().default(false),
   },
   (t) => [primaryKey({ columns: [t.eventId, t.userId] }), index('members_user_idx').on(t.userId)],
 );
@@ -222,4 +237,56 @@ export const comments = pgTable(
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (t) => [index('comments_post_created_idx').on(t.postId, t.createdAt)],
+);
+
+/**
+ * Une ligne par chose arrivée à quelqu'un : alimente l'écran Activité. Le worker regroupe
+ * ensuite les lignes pas encore poussées (`pushed_at` vide) en une notification push par salve.
+ */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    /** Destinataire. */
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: notificationTypeEnum('type').notNull(),
+    actorId: uuid('actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    eventId: uuid('event_id')
+      .notNull()
+      .references(() => events.id, { onDelete: 'cascade' }),
+    postId: uuid('post_id').references(() => posts.id, { onDelete: 'cascade' }),
+    mediaId: uuid('media_id').references(() => media.id, { onDelete: 'cascade' }),
+    commentId: uuid('comment_id').references(() => comments.id, { onDelete: 'cascade' }),
+    emoji: text('emoji'),
+    excerpt: text('excerpt'),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    pushedAt: timestamp('pushed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('notifications_user_created_idx').on(t.userId, t.createdAt),
+    index('notifications_pending_idx').on(t.userId).where(sql`${t.pushedAt} is null`),
+  ],
+);
+
+/** Un abonnement Web Push par appareil (navigateur ou PWA installée). */
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull().unique(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    userAgent: text('user_agent'),
+    createdAt: createdAt(),
+    lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+  },
+  (t) => [index('push_subscriptions_user_idx').on(t.userId)],
 );

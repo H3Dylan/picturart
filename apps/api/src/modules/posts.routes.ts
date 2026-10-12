@@ -21,24 +21,13 @@ import {
   posts,
   users,
 } from '../db/schema.ts';
-import { forbidden, HttpError, notFound, parse } from '../lib/errors.ts';
+import { decodeCursor, encodeCursor } from '../lib/cursor.ts';
+import { forbidden, notFound, parse } from '../lib/errors.ts';
+import { quietly } from '../notifications/notifier.ts';
 import type { RealtimeHub } from '../realtime/hub.ts';
 import { isUuid, requireMember } from './access.ts';
 
 const PAGE_SIZE = 20;
-
-function encodeCursor(createdAt: Date, id: string) {
-  return Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
-}
-
-function decodeCursor(cursor: string) {
-  const [iso, id] = Buffer.from(cursor, 'base64url').toString('utf8').split('|');
-  const date = new Date(iso ?? '');
-  if (!id || !isUuid(id) || Number.isNaN(date.getTime())) {
-    throw new HttpError(400, 'validation', 'Curseur invalide.');
-  }
-  return { date, id };
-}
 
 function groupReactions(
   rows: { target: string; emoji: string; total: number }[],
@@ -264,6 +253,10 @@ export function postsRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
 
     const [created] = await loadPosts(db, [postId], user.id);
     void hub.publish({ type: 'post.created', eventId: input.eventId, postId });
+    await quietly(
+      app.notifier.postCreated({ id: postId, eventId: input.eventId, authorId: user.id }),
+      request.log,
+    );
     return reply.code(201).send(created);
   });
 
@@ -302,6 +295,7 @@ export function postsRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
 
     await db.update(posts).set({ deletedAt: new Date() }).where(eq(posts.id, post.id));
     void hub.publish({ type: 'post.deleted', eventId: post.eventId, postId: post.id });
+    await quietly(app.notifier.postDeleted(post.id), request.log);
     return reply.code(204).send();
   });
 }

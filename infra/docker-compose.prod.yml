@@ -1,5 +1,6 @@
 # Production sur le CT 107. Copié dans /srv/picturart/compose.yml à chaque déploiement.
-# Secrets dans /srv/picturart/.env (jamais dans Git) : POSTGRES_PASSWORD, DATABASE_URL.
+# Secrets dans /srv/picturart/.env (jamais dans Git) : POSTGRES_PASSWORD, DATABASE_URL,
+# VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY (notifications push).
 name: picturart
 
 services:
@@ -27,6 +28,8 @@ services:
       PORT: 3000
       # Les médias sont traités par le service worker
       WORKER_INLINE: 'false'
+      # Web Push : la clé publique suffit à l'API (abonnement des appareils)
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
     volumes:
       - /srv/picturart/media:/data/media
     ports:
@@ -43,6 +46,9 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL manquant}
       MEDIA_DIR: /data/media
       VIDEO_HWACCEL: auto
+      # Envoi des notifications push regroupées
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
     volumes:
       - /srv/picturart/media:/data/media
     devices:

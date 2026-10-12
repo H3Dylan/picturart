@@ -3,9 +3,10 @@ import { Bell } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { FilmStrip } from '../components/FilmStrip.tsx';
+import { NotificationsNudge } from '../components/NotificationsNudge.tsx';
 import { PostCard } from '../components/PostCard.tsx';
 import ui from '../components/ui.module.css';
-import { useDeletePost, useEvents, useFeed, useMe } from '../lib/queries.ts';
+import { useDeletePost, useEvents, useFeed, useMe, useUnread } from '../lib/queries.ts';
 import feed from './FeedPage.module.css';
 import styles from './pages.module.css';
 
@@ -19,6 +20,7 @@ export function FeedPage() {
   const { data: me } = useMe();
   const events = useEvents();
   const posts = useFeed();
+  const unread = useUnread(true).data ?? 0;
   const sentinel = useRef<HTMLDivElement>(null);
   const all = posts.data?.pages.flatMap((page) => page.posts) ?? [];
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = posts;
@@ -44,10 +46,17 @@ export function FeedPage() {
           <p className={ui.meta}>{rollLabel(new Date())}</p>
           <h1 className={ui.pageTitle}>Pictur'Art</h1>
         </div>
-        <Link to="/activite" aria-label="Activité" className={ui.iconButton}>
+        <Link
+          to="/activite"
+          aria-label={unread ? `Activité, ${unread} non lue${unread > 1 ? 's' : ''}` : 'Activité'}
+          className={`${ui.iconButton} ${feed.bell}`}
+        >
           <Bell size={20} strokeWidth={1.8} />
+          {unread > 0 && <span className={feed.bellDot} aria-hidden="true" />}
         </Link>
       </header>
+
+      <NotificationsNudge />
 
       {events.data && events.data.length > 0 && (
         <nav aria-label="Mes événements" className={feed.chips}>

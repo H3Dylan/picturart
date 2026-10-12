@@ -24,7 +24,11 @@ export function useRealtime(enabled: boolean) {
       } catch {
         return;
       }
-      if (!('eventId' in message)) return;
+      if (message.type === 'notification.created') {
+        client.invalidateQueries({ queryKey: keys.notifications });
+        client.invalidateQueries({ queryKey: keys.unread });
+        return;
+      }
       client.invalidateQueries({ queryKey: keys.feed });
       client.invalidateQueries({ queryKey: keys.posts(message.eventId) });
       client.invalidateQueries({ queryKey: keys.post(message.postId) });
@@ -60,6 +64,7 @@ export function useRealtime(enabled: boolean) {
       retry = 0;
       connect();
       client.invalidateQueries({ queryKey: keys.feed });
+      client.invalidateQueries({ queryKey: keys.unread });
     };
 
     connect();

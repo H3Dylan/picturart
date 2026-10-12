@@ -57,6 +57,8 @@ export interface EventSummary {
   location: string | null;
   role: Role;
   memberCount: number;
+  /** Notifications push coupées pour cet événement (l'activité reste visible). */
+  muted: boolean;
   createdAt: string;
 }
 

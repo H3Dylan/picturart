@@ -8,6 +8,7 @@ import type {
   InvitePreview,
   LoginInput,
   Me,
+  NotificationsPage,
   PlancheItem,
   PostDto,
   PostsPage,
@@ -19,6 +20,7 @@ import type {
 } from '@picturart/shared';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, api } from './api.ts';
+import { disablePush } from './pwa.ts';
 
 export const keys = {
   me: ['me'] as const,
@@ -30,6 +32,8 @@ export const keys = {
   comments: (postId: string) => ['comments', postId] as const,
   planche: (eventId: string) => ['planche', eventId] as const,
   invite: (token: string) => ['invite', token] as const,
+  notifications: ['notifications'] as const,
+  unread: ['unread'] as const,
 };
 
 /** Tant que des photos se développent, on rafraîchit régulièrement. */
@@ -206,7 +210,11 @@ export function useLogin() {
 export function useLogout() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: () => api<void>('/auth/logout', { method: 'POST' }),
+    mutationFn: async () => {
+      // Cet appareil ne doit plus recevoir les notifications de ce compte
+      await disablePush().catch(() => {});
+      await api<void>('/auth/logout', { method: 'POST' });
+    },
     onSuccess: () => {
       client.clear();
       client.setQueryData(keys.me, null);
@@ -260,6 +268,53 @@ export function useAcceptInvite(token: string) {
       }),
     onSuccess: ({ me }) => {
       if (me) client.setQueryData(keys.me, me);
+      client.invalidateQueries({ queryKey: keys.events });
+    },
+  });
+}
+
+// ---- Activité et notifications --------------------------------------------------------
+export function useNotifications() {
+  return useInfiniteQuery({
+    queryKey: keys.notifications,
+    queryFn: ({ pageParam }) =>
+      api<NotificationsPage>(
+        `/notifications${pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : ''}`,
+      ),
+    initialPageParam: '',
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+  });
+}
+
+/** Nombre de notifications non lues (pastille de la barre de navigation). */
+export function useUnread(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.unread,
+    queryFn: async () => (await api<{ unread: number }>('/notifications/unread')).unread,
+    enabled,
+  });
+}
+
+export function useMarkRead() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (ids?: string[]) =>
+      api<{ unread: number }>('/notifications/read', { method: 'POST', body: ids ? { ids } : {} }),
+    onSuccess: ({ unread }) => {
+      client.setQueryData(keys.unread, unread);
+      client.invalidateQueries({ queryKey: keys.notifications });
+    },
+  });
+}
+
+/** Couper ou rétablir les notifications push d'un événement. */
+export function useMuteEvent(eventId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (muted: boolean) =>
+      api<{ muted: boolean }>(`/events/${eventId}/mute`, { method: 'PUT', body: { muted } }),
+    onSuccess: ({ muted }) => {
+      client.setQueryData<EventDetail>(keys.event(eventId), (d) => (d ? { ...d, muted } : d));
       client.invalidateQueries({ queryKey: keys.events });
     },
   });

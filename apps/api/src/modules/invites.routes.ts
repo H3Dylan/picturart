@@ -9,6 +9,7 @@ import type { Db } from '../db/client.ts';
 import { eventMembers, events, invites, users } from '../db/schema.ts';
 import { HttpError, parse } from '../lib/errors.ts';
 import { sha256 } from '../lib/tokens.ts';
+import { quietly } from '../notifications/notifier.ts';
 import { toMe } from './serializers.ts';
 
 const invalidInvite = () =>
@@ -133,6 +134,7 @@ export function invitesRoutes(app: FastifyInstance, db: Db, config: Config) {
           .update(invites)
           .set({ useCount: sql`${invites.useCount} + 1` })
           .where(eq(invites.id, invite.id));
+        await quietly(app.notifier.memberJoined(invite.eventId, userId), request.log);
       }
 
       return { eventId: invite.eventId, me: me ?? (request.user ? toMe(request.user) : null) };

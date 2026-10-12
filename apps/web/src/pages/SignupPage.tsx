@@ -34,7 +34,13 @@ export function SignupPage() {
       return;
     }
     setLocalErrors({});
-    accept.mutate(parsed.data, { onSuccess: () => navigate('/evenements', { replace: true }) });
+    // Nouveau compte : proposer l'installation et les notifications avant d'entrer
+    accept.mutate(parsed.data, {
+      onSuccess: ({ eventId }) =>
+        navigate(`/bienvenue?suite=${encodeURIComponent(`/evenements/${eventId}`)}`, {
+          replace: true,
+        }),
+    });
   }
 
   const apiError = accept.error instanceof ApiError ? accept.error : null;

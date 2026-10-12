@@ -31,3 +31,18 @@
   border-color: var(--chip-active-bg);
   color: var(--chip-active-fg);
 }
+
+.bell {
+  position: relative;
+}
+
+.bellDot {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--stamp);
+  border: 2px solid var(--bg);
+}

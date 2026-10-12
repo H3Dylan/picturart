@@ -22,6 +22,11 @@ const envSchema = z.object({
   FFPROBE_PATH: z.string().default('ffprobe'),
   /** Décodeur HEIC de libheif (`heif-dec`, ou `heif-convert` sur les versions antérieures à 1.18). */
   HEIF_DEC_PATH: z.string().default('heif-dec'),
+  /** Web Push (VAPID). Sans ces clés, les notifications push sont désactivées (l'écran Activité reste). */
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  /** Contact du serveur pour les services de push (une URL suffit). */
+  VAPID_SUBJECT: z.string().default('https://pictur.dylanbouillon.fr'),
 });
 
 export type Config = Omit<z.infer<typeof envSchema>, 'WORKER_INLINE'> & {

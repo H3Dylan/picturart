@@ -19,7 +19,12 @@ export function eventsRoutes(app: FastifyInstance, db: Db, config: Config) {
 
   async function listEvents(userId: string, eventId?: string): Promise<EventSummary[]> {
     const rows = await db
-      .select({ event: events, role: eventMembers.role, memberCount: memberCounts.total })
+      .select({
+        event: events,
+        role: eventMembers.role,
+        muted: eventMembers.muted,
+        memberCount: memberCounts.total,
+      })
       .from(eventMembers)
       .innerJoin(events, eq(events.id, eventMembers.eventId))
       .innerJoin(memberCounts, eq(memberCounts.eventId, events.id))
@@ -32,7 +37,7 @@ export function eventsRoutes(app: FastifyInstance, db: Db, config: Config) {
       )
       .orderBy(desc(events.createdAt));
 
-    return rows.map(({ event, role, memberCount }) => ({
+    return rows.map(({ event, role, muted, memberCount }) => ({
       id: event.id,
       name: event.name,
       startsOn: event.startsOn,
@@ -40,6 +45,7 @@ export function eventsRoutes(app: FastifyInstance, db: Db, config: Config) {
       location: event.location,
       role,
       memberCount: Number(memberCount),
+      muted,
       createdAt: event.createdAt.toISOString(),
     }));
   }

@@ -1,0 +1,108 @@
+.screen {
+  min-height: 100dvh;
+}
+
+.step {
+  align-self: flex-end;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1.12;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.steps li + li {
+  border-top: 1px solid var(--border);
+}
+
+.number {
+  font: 700 13px var(--font-mono);
+  color: var(--accent-text);
+}
+
+.stepText {
+  flex: 1;
+  font-size: 15px;
+}
+
+.stepText strong {
+  font-weight: 600;
+}
+
+/* Encart sombre, comme les souvenirs de la DA */
+.notifs {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--memory-bg);
+  color: var(--memory-fg);
+}
+
+.notifsIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--memory-label);
+}
+
+.notifsTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.notifsText {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+.actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.actions > button {
+  width: 100%;
+}

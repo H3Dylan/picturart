@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["-y", "pnpm@10.34.7", "--filter", "@picturart/web", "dev"],
       "port": 5173
+    },
+    {
+      "name": "web-build",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "pnpm@10.34.7", "--filter", "@picturart/web", "preview:build"],
+      "port": 4173
     }
   ]
 }

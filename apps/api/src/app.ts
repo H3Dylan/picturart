@@ -18,6 +18,9 @@ import { invitesRoutes } from './modules/invites.routes.ts';
 import { mediaRoutes } from './modules/media.routes.ts';
 import { postsRoutes } from './modules/posts.routes.ts';
 import { socialRoutes } from './modules/social.routes.ts';
+import { PushDispatcher, webPushSender } from './notifications/dispatcher.ts';
+import { Notifier } from './notifications/notifier.ts';
+import { notificationsRoutes } from './notifications/routes.ts';
 import { RealtimeHub } from './realtime/hub.ts';
 import { realtimeRoutes } from './realtime/routes.ts';
 
@@ -25,6 +28,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     /** Worker intégré (développement, tests) ; absent en production, où il tourne à part. */
     mediaWorker: MediaWorker | undefined;
+    notifier: Notifier;
     realtime: RealtimeHub;
   }
 }
@@ -47,6 +51,12 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
     ? new MediaWorker({ database, storage, tools: config, log: app.log })
     : undefined;
   app.decorate('mediaWorker', worker);
+  app.decorate('notifier', new Notifier(db, hub));
+  // Envoi push regroupé : avec le worker (ici en développement, dans son conteneur en production)
+  const dispatcher =
+    config.workerInline && config.VAPID_PUBLIC_KEY && config.VAPID_PRIVATE_KEY
+      ? new PushDispatcher({ db, send: webPushSender(config), log: app.log })
+      : undefined;
 
   await app.register(cookie);
   await app.register(websocket, { options: { maxPayload: 4096 } });
@@ -97,6 +107,7 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
   socialRoutes(app, db, hub);
   realtimeRoutes(app, hub, config);
   mediaRoutes(app, db);
+  notificationsRoutes(app, db, config);
   registerUploads(app, db, storage, () => database.notify(JOBS_CHANNEL, ''));
 
   // Média traité par le worker (ici ou dans son conteneur) : prévenir les membres en direct
@@ -107,9 +118,11 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
       (mediaId) => void hub.publishMediaReady(mediaId),
     );
     await worker?.start();
+    dispatcher?.start();
   });
   app.addHook('onClose', async () => {
     await worker?.stop();
+    await dispatcher?.stop();
     await unlisten?.();
   });
 

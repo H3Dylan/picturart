@@ -5,6 +5,7 @@ import type { Log } from './media/processor.ts';
 import { MediaStorage } from './media/storage.ts';
 import { hasTool } from './media/tools.ts';
 import { MediaWorker } from './media/worker.ts';
+import { PushDispatcher, webPushSender } from './notifications/dispatcher.ts';
 
 /** Journal JSON sur une ligne, au même format que celui de l'API (pino). */
 function jsonLogger(): Log {
@@ -33,6 +34,7 @@ log.info(
     ffmpeg: await hasTool(config.FFMPEG_PATH),
     heif: await hasTool(config.HEIF_DEC_PATH, '--version'),
     vaapi: config.VIDEO_HWACCEL !== 'none' && existsSync(config.VAAPI_DEVICE),
+    push: Boolean(config.VAPID_PUBLIC_KEY && config.VAPID_PRIVATE_KEY),
   },
   'worker démarré',
 );
@@ -40,9 +42,17 @@ log.info(
 const worker = new MediaWorker({ database, storage, tools: config, log });
 await worker.start();
 
+// Notifications push regroupées (sans clés VAPID : écran Activité seulement)
+const dispatcher =
+  config.VAPID_PUBLIC_KEY && config.VAPID_PRIVATE_KEY
+    ? new PushDispatcher({ db: database.db, send: webPushSender(config), log })
+    : undefined;
+dispatcher?.start();
+
 async function shutdown(signal: string) {
   log.info({ signal }, 'arrêt du worker');
   await worker.stop();
+  await dispatcher?.stop();
   await database.close();
   process.exit(0);
 }

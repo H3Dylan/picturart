@@ -1,6 +1,6 @@
 import { createBrowserRouter } from 'react-router';
+import { ActivityPage } from './pages/ActivityPage.tsx';
 import { AppLayout, HomeRedirect } from './pages/AppLayout.tsx';
-import { ComingSoonPage, NotFoundPage } from './pages/ComingSoonPage.tsx';
 import { CommentsPage } from './pages/CommentsPage.tsx';
 import { EventMembersPage } from './pages/EventMembersPage.tsx';
 import { EventPage } from './pages/EventPage.tsx';
@@ -9,9 +9,11 @@ import { FeedPage } from './pages/FeedPage.tsx';
 import { InvitePage } from './pages/InvitePage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { NewPostPage } from './pages/NewPostPage.tsx';
+import { NotFoundPage } from './pages/NotFoundPage.tsx';
 import { ProfilePage } from './pages/ProfilePage.tsx';
 import { SignupPage } from './pages/SignupPage.tsx';
 import { PlancheViewerPage, PostViewerPage } from './pages/ViewerPage.tsx';
+import { WelcomePage } from './pages/WelcomePage.tsx';
 
 export const router = createBrowserRouter([
   { path: '/', element: <HomeRedirect /> },
@@ -27,7 +29,7 @@ export const router = createBrowserRouter([
       { path: '/evenements/:id/membres', element: <EventMembersPage /> },
       { path: '/poster', element: <NewPostPage /> },
       { path: '/profil', element: <ProfilePage /> },
-      { path: '/activite', element: <ComingSoonPage title="Activité" milestone="Jalon M5" /> },
+      { path: '/activite', element: <ActivityPage /> },
     ],
   },
   {
@@ -37,6 +39,7 @@ export const router = createBrowserRouter([
       { path: '/posts/:postId/photos/:index', element: <PostViewerPage /> },
       { path: '/evenements/:eventId/photos/:index', element: <PlancheViewerPage /> },
       { path: '/posts/:postId/commentaires', element: <CommentsPage /> },
+      { path: '/bienvenue', element: <WelcomePage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },

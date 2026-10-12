@@ -1,13 +1,31 @@
-import type { Me, Theme } from '@picturart/shared';
+import type { Me, NotificationPrefs, Theme } from '@picturart/shared';
+import { ChevronRight } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Avatar } from '../components/Avatar.tsx';
+import { Switch } from '../components/Switch.tsx';
 import { TextField } from '../components/TextField.tsx';
 import ui from '../components/ui.module.css';
 import { ApiError } from '../lib/api.ts';
+import { isStandalone, type PushState, usePush } from '../lib/pwa.ts';
 import { useLogout, useMe, useUpdateMe } from '../lib/queries.ts';
 import { applyTheme } from '../lib/theme.ts';
+import p from './ProfilePage.module.css';
 import styles from './pages.module.css';
+
+const PREFS: { key: keyof NotificationPrefs; label: string }[] = [
+  { key: 'posts', label: 'La bande poste des photos' },
+  { key: 'reactions', label: 'On réagit à mes posts' },
+  { key: 'comments', label: 'On commente mes posts' },
+];
+
+/** Pourquoi les notifications ne peuvent pas être activées sur cet appareil. */
+const PUSH_HINT: Partial<Record<PushState, string>> = {
+  'needs-install': 'Sur iPhone, installe d’abord l’app sur l’écran d’accueil.',
+  denied: 'Bloquées pour Pictur’Art dans les réglages du téléphone ou du navigateur.',
+  unsupported: 'Ce navigateur ne gère pas les notifications.',
+  unavailable: 'Pas encore disponibles sur le serveur.',
+};
 
 const THEME_OPTIONS: { value: Theme; label: string }[] = [
   { value: 'auto', label: 'Auto' },
@@ -25,6 +43,8 @@ function Profile({ me }: { me: Me }) {
   const navigate = useNavigate();
   const update = useUpdateMe();
   const logout = useLogout();
+  const push = usePush();
+  const pushHint = push.state === 'loading' ? undefined : PUSH_HINT[push.state];
   const [form, setForm] = useState({ displayName: me.displayName, bio: me.bio });
   const [saved, setSaved] = useState(false);
   const errors = update.error instanceof ApiError ? update.error.fields : {};
@@ -100,6 +120,48 @@ function Profile({ me }: { me: Me }) {
             </label>
           ))}
         </fieldset>
+      </section>
+
+      <section className={styles.stack} style={{ gap: 8 }}>
+        <h2 className={p.sectionTitle}>Me prévenir quand…</h2>
+        <ul className={p.list}>
+          {PREFS.map(({ key, label }) => (
+            <li key={key} className={p.row}>
+              <span>{label}</span>
+              <Switch
+                label={label}
+                checked={me.notificationPrefs[key]}
+                onChange={(checked) => update.mutate({ notificationPrefs: { [key]: checked } })}
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className={styles.stack} style={{ gap: 8 }}>
+        <h2 className={p.sectionTitle}>Sur cet appareil</h2>
+        <ul className={p.list}>
+          <li className={p.row}>
+            <span>
+              Notifications
+              {pushHint && <span className={p.hint}>{pushHint}</span>}
+            </span>
+            <Switch
+              label="Notifications sur cet appareil"
+              checked={push.state === 'on'}
+              disabled={push.busy || (push.state !== 'on' && push.state !== 'off')}
+              onChange={(checked) => void (checked ? push.enable() : push.disable())}
+            />
+          </li>
+          {!isStandalone() && (
+            <li>
+              <Link to="/bienvenue?suite=/profil" className={p.row}>
+                <span>Installer l’app sur l’écran d’accueil</span>
+                <ChevronRight size={18} strokeWidth={2} aria-hidden="true" />
+              </Link>
+            </li>
+          )}
+        </ul>
       </section>
 
       <button

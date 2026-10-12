@@ -10,6 +10,7 @@ import { requireUser } from '../auth/plugin.ts';
 import type { Db } from '../db/client.ts';
 import { comments, media, mediaReactions, postReactions, posts, users } from '../db/schema.ts';
 import { forbidden, notFound, parse } from '../lib/errors.ts';
+import { quietly } from '../notifications/notifier.ts';
 import type { RealtimeHub } from '../realtime/hub.ts';
 import { isUuid, requireMember } from './access.ts';
 import { findVisiblePost, loadPosts } from './posts.routes.ts';
@@ -44,6 +45,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
         set: { emoji, createdAt: new Date() },
       });
     void hub.publish({ type: 'reaction.updated', eventId: post.eventId, postId: post.id });
+    await quietly(app.notifier.reacted(user.id, post.id, null, emoji), request.log);
     const [dto] = await loadPosts(db, [post.id], user.id);
     return dto?.reactions;
   });
@@ -55,6 +57,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
       .delete(postReactions)
       .where(and(eq(postReactions.postId, post.id), eq(postReactions.userId, user.id)));
     void hub.publish({ type: 'reaction.updated', eventId: post.eventId, postId: post.id });
+    await quietly(app.notifier.unreacted(user.id, post.id, null), request.log);
     const [dto] = await loadPosts(db, [post.id], user.id);
     return dto?.reactions;
   });
@@ -77,6 +80,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
         set: { emoji, createdAt: new Date() },
       });
     void hub.publish({ type: 'reaction.updated', ...row });
+    await quietly(app.notifier.reacted(user.id, row.postId, row.mediaId, emoji), request.log);
     return mediaReactionsOf(row.postId, row.mediaId, user.id);
   });
 
@@ -87,6 +91,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
       .delete(mediaReactions)
       .where(and(eq(mediaReactions.mediaId, row.mediaId), eq(mediaReactions.userId, user.id)));
     void hub.publish({ type: 'reaction.updated', ...row });
+    await quietly(app.notifier.unreacted(user.id, row.postId, row.mediaId), request.log);
     return mediaReactionsOf(row.postId, row.mediaId, user.id);
   });
 
@@ -124,6 +129,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
         .returning();
       if (!comment) throw new Error('Commentaire non créé');
       void hub.publish({ type: 'comment.created', eventId: post.eventId, postId: post.id });
+      await quietly(app.notifier.commented(user.id, post.id, comment.id, body), request.log);
       const dto: CommentDto = {
         id: comment.id,
         postId: post.id,
@@ -148,6 +154,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
     if (comment.authorId !== user.id) throw forbidden();
     await db.update(comments).set({ deletedAt: new Date() }).where(eq(comments.id, comment.id));
     void hub.publish({ type: 'comment.deleted', eventId: post.eventId, postId: post.id });
+    await quietly(app.notifier.commentDeleted(comment.id), request.log);
     return reply.code(204).send();
   });
 

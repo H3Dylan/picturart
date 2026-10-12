@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { type NotificationPrefs, notificationPrefsSchema } from './notifications.ts';
 
 export const THEMES = ['auto', 'light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
@@ -26,6 +27,7 @@ export const updateMeSchema = z
     displayName,
     bio: z.string().trim().max(160, '160 caractères maximum'),
     theme: z.enum(THEMES),
+    notificationPrefs: notificationPrefsSchema.partial(),
   })
   .partial();
 export type UpdateMeInput = z.infer<typeof updateMeSchema>;
@@ -36,5 +38,6 @@ export interface Me {
   email: string;
   bio: string;
   theme: Theme;
+  notificationPrefs: NotificationPrefs;
   createdAt: string;
 }

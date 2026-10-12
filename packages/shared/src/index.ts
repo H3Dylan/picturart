@@ -28,6 +28,26 @@ export {
 } from './events.ts';
 export { type Health, healthSchema } from './health.ts';
 export {
+  DEFAULT_NOTIFICATION_PREFS,
+  describeNotification,
+  markReadSchema,
+  mediaSummary,
+  muteEventSchema,
+  NOTIFICATION_TYPES,
+  type NotificationDto,
+  type NotificationPrefs,
+  type NotificationsPage,
+  type NotificationType,
+  notificationLink,
+  notificationPrefsSchema,
+  PREF_OF_TYPE,
+  type PushPayload,
+  type PushSubscriptionInput,
+  pushSubscriptionSchema,
+  summarizeForPush,
+  unsubscribePushSchema,
+} from './notifications.ts';
+export {
   ACCEPTED_IMAGE_TYPES,
   ACCEPTED_MEDIA_TYPES,
   ACCEPTED_VIDEO_TYPES,

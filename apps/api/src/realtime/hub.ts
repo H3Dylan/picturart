@@ -43,7 +43,17 @@ export class RealtimeHub {
     return total;
   }
 
-  async publish(message: RealtimeMessage) {
+  /** Message personnel, envoyé aux seuls utilisateurs indiqués. */
+  publishToUsers(userIds: Iterable<string>, message: RealtimeMessage) {
+    const payload = JSON.stringify(message);
+    for (const userId of userIds) {
+      for (const socket of this.#sockets.get(userId) ?? []) {
+        if (socket.readyState === OPEN) socket.send(payload);
+      }
+    }
+  }
+
+  async publish(message: RealtimeMessage & { eventId: string }) {
     if (this.#sockets.size === 0) return;
     try {
       const members = await this.#db

@@ -51,3 +51,23 @@
   align-items: center;
   justify-content: center;
 }
+
+.item {
+  position: relative;
+}
+
+/* Non lues : pastille façon tampon de date */
+.badge {
+  position: absolute;
+  top: 2px;
+  left: 26px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  border: 2px solid var(--nav-bg);
+  background: var(--stamp);
+  color: #1e1418;
+  font: 700 10px / 14px var(--font-mono);
+  text-align: center;
+}

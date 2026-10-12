@@ -57,7 +57,7 @@ Ce découpage suffit largement pour une dizaine d'utilisateurs, tout en restant 
 | Styles | **CSS Modules + `design/tokens.css`** | Les tokens de la DA tels quels, sans framework |
 | Icônes | **Lucide** | Style au trait de la DA |
 | Polices | **@fontsource** (Rubik, Space Mono) | Auto-hébergées, pas d'appel à Google |
-| PWA | **vite-plugin-pwa** (mode `injectManifest`) | Service worker sur mesure pour le push et le cache |
+| PWA | Manifeste + **service worker maison** (`src/sw.ts`, entrée Vite à part) | Coquille hors ligne et push, sans dépendance (vite-plugin-pwa ne suit pas encore Vite 8) |
 | Envoi de fichiers | **tus** (`tus-js-client` / `@tus/server`) | Envois reprenables, indispensables pour la 4K sur mobile |
 | Back | **Fastify 5** | Rapide, typé, plugins officiels (cookies, rate-limit, websocket) |
 | Validation | **Zod** (schémas dans `packages/shared`) | Mêmes règles côté client et serveur |
@@ -228,14 +228,17 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 
 ### Temps réel
 - Une connexion WebSocket par appareil ; le serveur l'abonne aux événements dont l'utilisateur est membre.
-- Messages : `post.created`, `post.deleted`, `media.ready`, `reaction.updated`, `comment.created`, `comment.deleted` (et `notification.created` en M5).
+- Messages : `post.created`, `post.deleted`, `media.ready`, `reaction.updated`, `comment.created`, `comment.deleted` et `notification.created`, envoyé au seul destinataire (écran Activité et pastille).
 - **Décision M3** : les messages ne transportent que des identifiants, jamais de contenu. Le front invalide les requêtes TanStack Query concernées et relit l'API, qui refait le contrôle d'accès : pas de rechargement, et rien ne fuit par le canal temps réel.
 - Hub en mémoire dans l'API (une instance suffit pour la bande) ; ping toutes les 25 s, reconnexion progressive côté PWA et au retour au premier plan.
 
 ### Notifications push
-- Chaque action (photo postée, réaction, commentaire) crée une ligne `notifications`.
-- Un job **regroupe** par destinataire et événement, avec 2 minutes de calme : « Léa a ajouté 17 photos » au lieu de 17 notifications.
-- Préférences par utilisateur respectées (réglages de l'écran Mon profil).
+- Chaque action crée une ligne `notifications` par destinataire : post publié (toute la bande de l'événement), réaction et commentaire (l'auteur du post), arrivée d'un membre (écran Activité seulement). On ne se notifie jamais soi-même ; changer d'emoji remplace la notification, retirer une réaction ou supprimer un commentaire ou un post l'efface.
+- **Décision M5** : l'écran Activité lit cette table directement ; l'envoi push est fait par le **worker** (`PushDispatcher`, toutes les 10 s), qui regroupe par destinataire les lignes pas encore poussées. Il attend **2 minutes de calme** quand des photos arrivent (30 s pour une rafale de réactions ou de commentaires, 10 minutes au plus), puis envoie **une seule notification** : « Léa a ajouté 17 photos et 2 vidéos ». Les lignes sont marquées avant l'envoi : au plus une fois, jamais en double.
+- Préférences « Me prévenir quand… » (écran Mon profil) et **coupure par événement** (cloche de la page événement) respectées ; l'activité reste visible dans tous les cas.
+- Web Push standard (VAPID, bibliothèque `web-push`), un abonnement par appareil ; ceux que le service de push déclare expirés (404, 410) sont supprimés. Les clés VAPID vivent dans le `.env` du serveur.
+- Le service worker affiche la notification, met la **pastille** du nombre de non lues sur l'icône (Badging API) et, au clic, ramène l'app ouverte sur le bon écran.
+- Sur iPhone, le push n'existe qu'une fois l'app **installée** (iOS 16.4+) : l'écran de bienvenue guide l'installation, et l'invitation à activer les notifications revient dans le fil une fois l'app ouverte depuis l'icône.
 
 ---
 
@@ -285,7 +288,7 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 | ✅ **M2 · Événements & photos** | Événements, membres, rôles, création de post, envoi tus, vignettes | On peut poster des photos |
 | ✅ **M3 · Social** | Fil, page événement (planche), visionneuse, réactions, commentaires, temps réel | L'expérience de base est complète |
 | ✅ **M4 · Vidéos & HEIC** | Transcodage QuickSync, HDR, HEIC | Les médias iPhone passent sans souci |
-| **M5 · PWA & notifs** | Installation, push regroupées, écran Activité | On est prévenu quand la bande poste |
+| ✅ **M5 · PWA & notifs** | Installation, push regroupées, écran Activité | On est prévenu quand la bande poste |
 | **M6 · Fun** | Réactions perso, souvenirs « il y a 1 an », stats de profil | La personnalité de l'app |
 | **Bêta** | Ouverture à la bande, retours, corrections | v1.0 |
 

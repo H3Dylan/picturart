@@ -1,6 +1,7 @@
 import {
   type EventDetail,
   type Member,
+  muteEventSchema,
   updateEventSchema,
   updateMemberSchema,
 } from '@picturart/shared';
@@ -20,6 +21,15 @@ const lastAdmin = () =>
   );
 
 export function eventDetailRoutes(app: FastifyInstance, db: Db) {
+  async function isMuted(eventId: string, userId: string) {
+    const [row] = await db
+      .select({ muted: eventMembers.muted })
+      .from(eventMembers)
+      .where(and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, userId)))
+      .limit(1);
+    return row?.muted;
+  }
+
   async function adminCount(eventId: string) {
     const [row] = await db
       .select({ total: count() })
@@ -68,6 +78,7 @@ export function eventDetailRoutes(app: FastifyInstance, db: Db) {
       location: event.location,
       role,
       memberCount: members.length,
+      muted: (await isMuted(eventId, userId)) ?? false,
       createdAt: event.createdAt.toISOString(),
       members,
       postCount: Number(postStats?.total ?? 0),
@@ -90,6 +101,19 @@ export function eventDetailRoutes(app: FastifyInstance, db: Db) {
       await db.update(events).set(changes).where(eq(events.id, request.params.id));
     }
     return loadDetail(request.params.id, user.id);
+  });
+
+  /** Couper (ou rétablir) les notifications push d'un événement, pour soi. */
+  app.put<{ Params: { id: string } }>('/api/v1/events/:id/mute', async (request) => {
+    const user = requireUser(request);
+    if (!isUuid(request.params.id)) throw notFound('Événement');
+    await requireMember(db, request.params.id, user.id);
+    const { muted } = parse(muteEventSchema, request.body);
+    await db
+      .update(eventMembers)
+      .set({ muted })
+      .where(and(eq(eventMembers.eventId, request.params.id), eq(eventMembers.userId, user.id)));
+    return { muted };
   });
 
   /** Changer le rôle d'un membre (admins uniquement). */

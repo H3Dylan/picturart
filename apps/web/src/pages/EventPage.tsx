@@ -1,11 +1,18 @@
-import { Camera, ChevronLeft, Users } from 'lucide-react';
+import { Bell, BellOff, Camera, ChevronLeft, Users } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { Avatar } from '../components/Avatar.tsx';
 import { Planche } from '../components/Planche.tsx';
 import { PostCard } from '../components/PostCard.tsx';
 import ui from '../components/ui.module.css';
 import { formatEventDates } from '../lib/format.ts';
-import { useDeletePost, useEvent, useEventPosts, useMe, usePlanche } from '../lib/queries.ts';
+import {
+  useDeletePost,
+  useEvent,
+  useEventPosts,
+  useMe,
+  useMuteEvent,
+  usePlanche,
+} from '../lib/queries.ts';
 import ev from './EventPage.module.css';
 import styles from './pages.module.css';
 import { Splash } from './Splash.tsx';
@@ -22,6 +29,7 @@ export function EventPage() {
   const [params, setParams] = useSearchParams();
   const tab: Tab = TABS.find((t) => t.id === params.get('vue'))?.id ?? 'planche';
   const event = useEvent(id);
+  const mute = useMuteEvent(id);
 
   if (event.isPending) return <Splash />;
   if (event.isError) {
@@ -46,13 +54,33 @@ export function EventPage() {
         <Link to="/evenements" aria-label="Retour aux événements" className={ui.iconButton}>
           <ChevronLeft size={20} strokeWidth={1.8} />
         </Link>
-        <Link
-          to={`/evenements/${id}/membres`}
-          className={`${ui.buttonSecondary} ${ui.buttonSmall}`}
-        >
-          <Users size={16} strokeWidth={1.8} aria-hidden="true" />
-          {e.role === 'viewer' ? 'Membres' : 'Inviter'}
-        </Link>
+        <div className={ev.headerActions}>
+          <button
+            type="button"
+            className={ui.iconButton}
+            aria-pressed={e.muted}
+            aria-label={
+              e.muted
+                ? 'Notifications coupées pour cet événement (les réactiver)'
+                : 'Couper les notifications de cet événement'
+            }
+            onClick={() => mute.mutate(!e.muted)}
+            disabled={mute.isPending}
+          >
+            {e.muted ? (
+              <BellOff size={18} strokeWidth={1.8} />
+            ) : (
+              <Bell size={18} strokeWidth={1.8} />
+            )}
+          </button>
+          <Link
+            to={`/evenements/${id}/membres`}
+            className={`${ui.buttonSecondary} ${ui.buttonSmall}`}
+          >
+            <Users size={16} strokeWidth={1.8} aria-hidden="true" />
+            {e.role === 'viewer' ? 'Membres' : 'Inviter'}
+          </Link>
+        </div>
       </header>
 
       <section className={styles.stack} style={{ gap: 8 }}>

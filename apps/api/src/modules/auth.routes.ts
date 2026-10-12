@@ -46,7 +46,23 @@ export function authRoutes(app: FastifyInstance, db: Db, config: Config) {
     const user = requireUser(request);
     const changes = parse(updateMeSchema, request.body);
     if (Object.keys(changes).length === 0) return toMe(user);
-    const [updated] = await db.update(users).set(changes).where(eq(users.id, user.id)).returning();
+    const { notificationPrefs, ...rest } = changes;
+    const [updated] = await db
+      .update(users)
+      // Préférences : seules les clés envoyées changent
+      .set({
+        ...rest,
+        ...(notificationPrefs && {
+          notificationPrefs: {
+            ...toMe(user).notificationPrefs,
+            ...Object.fromEntries(
+              Object.entries(notificationPrefs).filter(([, value]) => value !== undefined),
+            ),
+          },
+        }),
+      })
+      .where(eq(users.id, user.id))
+      .returning();
     return toMe(updated ?? user);
   });
 }

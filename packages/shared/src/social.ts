@@ -50,4 +50,6 @@ export interface PlancheItem {
 export type RealtimeMessage =
   | { type: 'post.created' | 'post.deleted' | 'media.ready'; eventId: string; postId: string }
   | { type: 'reaction.updated'; eventId: string; postId: string; mediaId?: string }
-  | { type: 'comment.created' | 'comment.deleted'; eventId: string; postId: string };
+  | { type: 'comment.created' | 'comment.deleted'; eventId: string; postId: string }
+  /** Envoyé au seul destinataire : l'écran Activité et le badge se mettent à jour. */
+  | { type: 'notification.created' };

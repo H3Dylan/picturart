@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { BottomNav } from '../components/BottomNav.tsx';
-import { useMe } from '../lib/queries.ts';
+import { setAppBadge } from '../lib/pwa.ts';
+import { useMe, useUnread } from '../lib/queries.ts';
 import { useRealtime } from '../lib/realtime.ts';
 import { useApplyTheme } from '../lib/theme.ts';
 import { Splash } from './Splash.tsx';
@@ -14,6 +16,8 @@ export function AppLayout({ nav = true }: { nav?: boolean }) {
   const location = useLocation();
   useApplyTheme(me?.theme);
   useRealtime(Boolean(me));
+  const unread = useUnread(Boolean(me)).data ?? 0;
+  useEffect(() => setAppBadge(unread), [unread]);
 
   if (isPending) return <Splash />;
   if (!me) {
@@ -23,7 +27,7 @@ export function AppLayout({ nav = true }: { nav?: boolean }) {
   return (
     <>
       <Outlet />
-      {nav && <BottomNav />}
+      {nav && <BottomNav unread={unread} />}
     </>
   );
 }
