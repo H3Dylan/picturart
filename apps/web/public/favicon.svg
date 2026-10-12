@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Pictur'Art</title>
+  <rect width="64" height="64" rx="16" fill="#A63A5C"/>
+  <g fill="none" stroke="#FFF9FA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 23h8l5-7h10l5 7h8v26H14z"/>
+    <circle cx="32" cy="35" r="8"/>
+  </g>
+</svg>

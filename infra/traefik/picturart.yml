@@ -1,0 +1,46 @@
+# Configuration dynamique Traefik (CT 102) : /opt/traefik/config/picturart.yml
+# Rechargée à chaud. Middlewares préfixés « picturart- » (namespace partagé du provider file).
+
+http:
+  middlewares:
+    picturart-crowdsec:
+      forwardAuth:
+        address: http://bouncer-traefik:8080/api/v1/forwardAuth
+        trustForwardHeader: true
+
+    picturart-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        forceSTSHeader: true
+        contentTypeNosniff: true
+        customFrameOptionsValue: "DENY"
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "camera=(self), microphone=(), geolocation=(), payment=()"
+
+  routers:
+    picturart-api:
+      rule: "Host(`pictur.dylanbouillon.fr`) && PathPrefix(`/api`)"
+      entryPoints: ["websecure"]
+      middlewares: ["picturart-crowdsec", "picturart-headers"]
+      service: "picturart-api"
+      tls:
+        certResolver: "leresolver"
+
+    picturart-web:
+      rule: "Host(`pictur.dylanbouillon.fr`)"
+      entryPoints: ["websecure"]
+      middlewares: ["picturart-crowdsec", "picturart-headers"]
+      service: "picturart-web"
+      tls:
+        certResolver: "leresolver"
+
+  services:
+    picturart-api:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.107:3000"
+    picturart-web:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.1.107:8080"

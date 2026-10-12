@@ -1,0 +1,38 @@
+# Production sur le CT 107. Copié dans /srv/picturart/compose.yml à chaque déploiement.
+# Secrets dans /srv/picturart/.env (jamais dans Git) : POSTGRES_PASSWORD, DATABASE_URL.
+name: picturart
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: picturart
+      POSTGRES_DB: picturart
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant}
+    volumes:
+      - /srv/picturart/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U picturart']
+      interval: 10s
+      retries: 10
+
+  api:
+    image: ghcr.io/h3dylan/picturart-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL manquant}
+      PORT: 3000
+    volumes:
+      - /srv/picturart/media:/data/media
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    image: ghcr.io/h3dylan/picturart-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - '8080:80'
