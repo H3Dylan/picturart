@@ -6,6 +6,7 @@ import { MediaStorage } from './media/storage.ts';
 import { hasTool } from './media/tools.ts';
 import { MediaWorker } from './media/worker.ts';
 import { PushDispatcher, webPushSender } from './notifications/dispatcher.ts';
+import { MemoryJob } from './notifications/memories.ts';
 
 /** Journal JSON sur une ligne, au même format que celui de l'API (pino). */
 function jsonLogger(): Log {
@@ -49,10 +50,15 @@ const dispatcher =
     : undefined;
 dispatcher?.start();
 
+// Souvenirs « il y a 1 an » : une notification par journée, chaque matin
+const memories = new MemoryJob(database.db, log);
+memories.start();
+
 async function shutdown(signal: string) {
   log.info({ signal }, 'arrêt du worker');
   await worker.stop();
   await dispatcher?.stop();
+  memories.stop();
   await database.close();
   process.exit(0);
 }

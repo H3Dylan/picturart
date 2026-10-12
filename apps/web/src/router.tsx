@@ -2,10 +2,12 @@ import { createBrowserRouter } from 'react-router';
 import { ActivityPage } from './pages/ActivityPage.tsx';
 import { AppLayout, HomeRedirect } from './pages/AppLayout.tsx';
 import { CommentsPage } from './pages/CommentsPage.tsx';
+import { CreateReactionPage } from './pages/CreateReactionPage.tsx';
 import { EventMembersPage } from './pages/EventMembersPage.tsx';
 import { EventPage } from './pages/EventPage.tsx';
 import { EventsPage } from './pages/EventsPage.tsx';
 import { FeedPage } from './pages/FeedPage.tsx';
+import { FriendProfilePage } from './pages/FriendProfilePage.tsx';
 import { InvitePage } from './pages/InvitePage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { NewPostPage } from './pages/NewPostPage.tsx';
@@ -29,6 +31,7 @@ export const router = createBrowserRouter([
       { path: '/evenements/:id/membres', element: <EventMembersPage /> },
       { path: '/poster', element: <NewPostPage /> },
       { path: '/profil', element: <ProfilePage /> },
+      { path: '/potes/:id', element: <FriendProfilePage /> },
       { path: '/activite', element: <ActivityPage /> },
     ],
   },
@@ -40,6 +43,7 @@ export const router = createBrowserRouter([
       { path: '/evenements/:eventId/photos/:index', element: <PlancheViewerPage /> },
       { path: '/posts/:postId/commentaires', element: <CommentsPage /> },
       { path: '/bienvenue', element: <WelcomePage /> },
+      { path: '/reactions/nouvelle', element: <CreateReactionPage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },

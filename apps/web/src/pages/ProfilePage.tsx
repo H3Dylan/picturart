@@ -3,12 +3,20 @@ import { ChevronRight } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Avatar } from '../components/Avatar.tsx';
+import { ReactionGlyph } from '../components/ReactionBar.tsx';
 import { Switch } from '../components/Switch.tsx';
 import { TextField } from '../components/TextField.tsx';
 import ui from '../components/ui.module.css';
 import { ApiError } from '../lib/api.ts';
 import { isStandalone, type PushState, usePush } from '../lib/pwa.ts';
-import { useLogout, useMe, useUpdateMe } from '../lib/queries.ts';
+import {
+  useCustomReactions,
+  useDeleteCustomReaction,
+  useLogout,
+  useMe,
+  useProfile,
+  useUpdateMe,
+} from '../lib/queries.ts';
 import { applyTheme } from '../lib/theme.ts';
 import p from './ProfilePage.module.css';
 import styles from './pages.module.css';
@@ -17,6 +25,7 @@ const PREFS: { key: keyof NotificationPrefs; label: string }[] = [
   { key: 'posts', label: 'La bande poste des photos' },
   { key: 'reactions', label: 'On réagit à mes posts' },
   { key: 'comments', label: 'On commente mes posts' },
+  { key: 'memories', label: 'Un souvenir refait surface' },
 ];
 
 /** Pourquoi les notifications ne peuvent pas être activées sur cet appareil. */
@@ -44,6 +53,9 @@ function Profile({ me }: { me: Me }) {
   const update = useUpdateMe();
   const logout = useLogout();
   const push = usePush();
+  const stats = useProfile(me.id).data?.stats;
+  const mine = (useCustomReactions().data ?? []).filter((r) => r.createdBy.id === me.id);
+  const removeReaction = useDeleteCustomReaction();
   const pushHint = push.state === 'loading' ? undefined : PUSH_HINT[push.state];
   const [form, setForm] = useState({ displayName: me.displayName, bio: me.bio });
   const [saved, setSaved] = useState(false);
@@ -68,10 +80,20 @@ function Profile({ me }: { me: Me }) {
         <Avatar id={me.id} name={form.displayName || me.displayName} size={60} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 20 }}>{me.displayName}</div>
-          <p className={ui.meta} style={{ letterSpacing: 1, textTransform: 'none' }}>
-            {me.email}
-          </p>
+          {stats ? (
+            <p className={ui.meta} style={{ letterSpacing: 1 }}>
+              {stats.posts} POST{stats.posts > 1 ? 'S' : ''} · {stats.reactionsReceived} RÉACTION
+              {stats.reactionsReceived > 1 ? 'S' : ''}
+            </p>
+          ) : (
+            <p className={ui.meta} style={{ letterSpacing: 1, textTransform: 'none' }}>
+              {me.email}
+            </p>
+          )}
         </div>
+        <Link to={`/potes/${me.id}`} className={`${ui.buttonSecondary} ${ui.buttonSmall}`}>
+          Voir
+        </Link>
       </section>
 
       <form className={styles.stack} onSubmit={save} noValidate>
@@ -162,6 +184,48 @@ function Profile({ me }: { me: Me }) {
             </li>
           )}
         </ul>
+      </section>
+
+      <section className={styles.stack} style={{ gap: 8 }}>
+        <h2 className={p.sectionTitle}>Mes réactions perso</h2>
+        {mine.length === 0 ? (
+          <p className={p.empty}>
+            Ouvre une photo et appuie sur l’icône autocollant pour recadrer une tête : toute la
+            bande pourra s’en servir comme réaction.
+          </p>
+        ) : (
+          <ul className={p.list}>
+            {mine.map((r) => (
+              <li key={r.id} className={p.row}>
+                <span className={p.reaction}>
+                  <ReactionGlyph reaction={r.key} size={40} />
+                  <span>
+                    {r.name}
+                    <span className={p.hint}>
+                      {r.uses ? `Utilisée ${r.uses} fois` : 'Pas encore utilisée'}
+                    </span>
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  className={ui.linkButton}
+                  disabled={removeReaction.isPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Supprimer « ${r.name} » ? Elle disparaîtra des posts où elle sert.`,
+                      )
+                    ) {
+                      removeReaction.mutate(r.id);
+                    }
+                  }}
+                >
+                  Supprimer
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <button

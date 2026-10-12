@@ -136,7 +136,7 @@ erDiagram
 | `media` | `id`, `post_id`, `uploader_id`, `kind` (`photo`/`video`), `status` (`uploading`/`processing`/`ready`/`failed`), `position`, `original_path`, `mime`, `size_bytes`, `sha256`, `width`, `height`, `duration_ms`, `taken_at`, `deleted_at` | `taken_at` (EXIF) trie la planche contact |
 | `media_variants` | `media_id`, `variant` (`thumb`/`display`/`video`/`poster`), `path`, `width`, `height`, `size_bytes` | |
 | `reactions` | `id`, `user_id`, `post_id` *ou* `media_id`, `emoji` *ou* `custom_reaction_id`, `created_at` | Une réaction par personne et par cible |
-| `custom_reactions` | `id`, `name`, `image_path`, `created_by`, `source_media_id`, `created_at` | « Tom choqué » |
+| `custom_reactions` | `id`, `name`, `image_path`, `created_by`, `source_media_id`, `created_at` | « Tom choqué » ; utilisée via la clé `custom:<id>` dans `post_reactions` / `media_reactions` |
 | `comments` | `id`, `post_id`, `author_id`, `body`, `created_at`, `edited_at`, `deleted_at` | |
 | `notifications` | `id`, `user_id`, `type`, `payload` (JSONB), `read_at`, `created_at` | Alimente l'écran Activité |
 | `push_subscriptions` | `id`, `user_id`, `endpoint`, `p256dh`, `auth`, `created_at` | Un abonnement par appareil |
@@ -240,6 +240,11 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 - Le service worker affiche la notification, met la **pastille** du nombre de non lues sur l'icône (Badging API) et, au clic, ramène l'app ouverte sur le bon écran.
 - Sur iPhone, le push n'existe qu'une fois l'app **installée** (iOS 16.4+) : l'écran de bienvenue guide l'installation, et l'invitation à activer les notifications revient dans le fil une fois l'app ouverte depuis l'icône.
 
+### Réactions perso, souvenirs et profils (M6)
+- **Décision M6 — réactions perso** : une tête recadrée dans la version d'affichage d'une photo (déjà tournée, sans métadonnées), réduite à 160 × 160 px en WebP. Elles sont **communes à toute la bande** (tous les comptes de l'instance, qui n'existent que sur invitation), comme le promet l'écran de création ; la photo d'origine, elle, reste réservée aux membres de son événement. Une réaction stocke la clé `custom:<id>` dans la même colonne que les emojis : aucun changement des comptes et des regroupements. Seule la créatrice supprime la sienne, ce qui l'efface des posts et de l'activité ; 30 par personne au plus.
+- **Souvenirs** : les journées passées (même jour et même mois, heure de Paris) des événements dont on est membre, d'après la date de prise de vue (sinon d'envoi), avec la photo la plus aimée. Carte en tête du fil, et chaque matin à partir de 9 h une notification « souvenir » par journée (tâche du worker, idempotente), poussée selon « Un souvenir refait surface ».
+- **Profils** : visibles seulement avec au moins un événement en commun (sinon 404, comme pour les événements). Stats (posts, réactions reçues sans les siennes, réaction la plus reçue) et grille de photos calculées **sur les seuls événements partagés** : un profil ne dévoile rien d'un événement dont on n'est pas.
+
 ---
 
 ## 7. Sécurité
@@ -289,7 +294,7 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 | ✅ **M3 · Social** | Fil, page événement (planche), visionneuse, réactions, commentaires, temps réel | L'expérience de base est complète |
 | ✅ **M4 · Vidéos & HEIC** | Transcodage QuickSync, HDR, HEIC | Les médias iPhone passent sans souci |
 | ✅ **M5 · PWA & notifs** | Installation, push regroupées, écran Activité | On est prévenu quand la bande poste |
-| **M6 · Fun** | Réactions perso, souvenirs « il y a 1 an », stats de profil | La personnalité de l'app |
+| ✅ **M6 · Fun** | Réactions perso, souvenirs « il y a 1 an », stats de profil | La personnalité de l'app |
 | **Bêta** | Ouverture à la bande, retours, corrections | v1.0 |
 
 ---

@@ -32,6 +32,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'reaction',
   'comment',
   'member',
+  'memory',
 ]);
 export const variantEnum = pgEnum('media_variant', ['thumb', 'display', 'video']);
 
@@ -252,9 +253,8 @@ export const notifications = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     type: notificationTypeEnum('type').notNull(),
-    actorId: uuid('actor_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Vide pour un souvenir. */
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'cascade' }),
     eventId: uuid('event_id')
       .notNull()
       .references(() => events.id, { onDelete: 'cascade' }),
@@ -289,4 +289,24 @@ export const pushSubscriptions = pgTable(
     lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
   },
   (t) => [index('push_subscriptions_user_idx').on(t.userId)],
+);
+
+/**
+ * Réactions perso de la bande : une tête recadrée dans une photo, avec un nom (« Tom choqué »).
+ * Utilisables par tous les comptes ; une réaction les désigne par la clé `custom:<id>`.
+ */
+export const customReactions = pgTable(
+  'custom_reactions',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    name: text('name').notNull(),
+    /** Image carrée WebP, relative au dossier des médias. */
+    imagePath: text('image_path').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sourceMediaId: uuid('source_media_id').references(() => media.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('custom_reactions_created_by_idx').on(t.createdBy)],
 );

@@ -3,6 +3,7 @@ import { Bell } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router';
 import { FilmStrip } from '../components/FilmStrip.tsx';
+import { MemoryCards } from '../components/MemoryCards.tsx';
 import { NotificationsNudge } from '../components/NotificationsNudge.tsx';
 import { PostCard } from '../components/PostCard.tsx';
 import ui from '../components/ui.module.css';
@@ -57,6 +58,7 @@ export function FeedPage() {
       </header>
 
       <NotificationsNudge />
+      <MemoryCards />
 
       {events.data && events.data.length > 0 && (
         <nav aria-label="Mes événements" className={feed.chips}>

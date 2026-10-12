@@ -27,6 +27,7 @@ describe('résumé des notifications push', () => {
     mediaId: null,
     target: null,
     emoji: null,
+    customReaction: null,
     excerpt: null,
     photos: 6,
     videos: 0,
@@ -118,11 +119,11 @@ describe('notifications : écran Activité, préférences et push', () => {
 
   it('les arrivées dans l’événement apparaissent chez les autres membres', async () => {
     const dylan = await activity('dylan');
-    expect(dylan.items.map((n) => `${n.actor.displayName} ${n.type}`)).toEqual([
+    expect(dylan.items.map((n) => `${n.actor?.displayName} ${n.type}`)).toEqual([
       'Max member',
       'Léa member',
     ]);
-    expect((await activity('lea')).items.map((n) => n.actor.displayName)).toEqual(['Max']);
+    expect((await activity('lea')).items.map((n) => n.actor?.displayName)).toEqual(['Max']);
     expect((await activity('max')).items).toEqual([]);
   });
 

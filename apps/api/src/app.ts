@@ -12,13 +12,16 @@ import { MediaStorage } from './media/storage.ts';
 import { registerUploads } from './media/uploads.ts';
 import { DONE_CHANNEL, JOBS_CHANNEL, MediaWorker } from './media/worker.ts';
 import { authRoutes } from './modules/auth.routes.ts';
+import { customReactionsRoutes } from './modules/custom-reactions.routes.ts';
 import { eventDetailRoutes } from './modules/event-detail.routes.ts';
 import { eventsRoutes } from './modules/events.routes.ts';
 import { invitesRoutes } from './modules/invites.routes.ts';
 import { mediaRoutes } from './modules/media.routes.ts';
 import { postsRoutes } from './modules/posts.routes.ts';
+import { profilesRoutes } from './modules/profiles.routes.ts';
 import { socialRoutes } from './modules/social.routes.ts';
 import { PushDispatcher, webPushSender } from './notifications/dispatcher.ts';
+import { MemoryJob } from './notifications/memories.ts';
 import { Notifier } from './notifications/notifier.ts';
 import { notificationsRoutes } from './notifications/routes.ts';
 import { RealtimeHub } from './realtime/hub.ts';
@@ -53,6 +56,7 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
   app.decorate('mediaWorker', worker);
   app.decorate('notifier', new Notifier(db, hub));
   // Envoi push regroupé : avec le worker (ici en développement, dans son conteneur en production)
+  const memories = config.workerInline ? new MemoryJob(db, app.log) : undefined;
   const dispatcher =
     config.workerInline && config.VAPID_PUBLIC_KEY && config.VAPID_PRIVATE_KEY
       ? new PushDispatcher({ db, send: webPushSender(config), log: app.log })
@@ -105,6 +109,8 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
   invitesRoutes(app, db, config);
   postsRoutes(app, db, hub);
   socialRoutes(app, db, hub);
+  customReactionsRoutes(app, db, storage);
+  profilesRoutes(app, db);
   realtimeRoutes(app, hub, config);
   mediaRoutes(app, db);
   notificationsRoutes(app, db, config);
@@ -119,10 +125,12 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
     );
     await worker?.start();
     dispatcher?.start();
+    memories?.start();
   });
   app.addHook('onClose', async () => {
     await worker?.stop();
     await dispatcher?.stop();
+    memories?.stop();
     await unlisten?.();
   });
 

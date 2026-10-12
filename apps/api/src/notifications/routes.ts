@@ -13,6 +13,7 @@ import { notifications, pushSubscriptions } from '../db/schema.ts';
 import { decodeCursor, encodeCursor } from '../lib/cursor.ts';
 import { notFound, parse } from '../lib/errors.ts';
 import { loadNotifications, unreadCount } from './load.ts';
+import { memoriesFor } from './memories.ts';
 
 const PAGE_SIZE = 30;
 
@@ -65,6 +66,9 @@ export function notificationsRoutes(app: FastifyInstance, db: Db, config: Config
       );
     return { unread: await unreadCount(db, user.id) };
   });
+
+  /** Souvenirs du jour : « il y a 1 an », en tête du fil. */
+  app.get('/api/v1/memories', async (request) => memoriesFor(db, requireUser(request).id));
 
   // ---- Web Push ----------------------------------------------------------------------
   /** Clé publique VAPID : la PWA en a besoin pour s'abonner. 404 si le push n'est pas configuré. */

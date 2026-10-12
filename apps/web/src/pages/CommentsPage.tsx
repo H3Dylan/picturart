@@ -3,6 +3,7 @@ import { ArrowRight, X } from 'lucide-react';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Avatar } from '../components/Avatar.tsx';
+import { ProfileLink } from '../components/ProfileLink.tsx';
 import ui from '../components/ui.module.css';
 import { ApiError } from '../lib/api.ts';
 import { timeAgo } from '../lib/format.ts';
@@ -113,10 +114,14 @@ function CommentRow({
   const [confirming, setConfirming] = useState(false);
   return (
     <li className={c.row}>
-      <Avatar id={comment.author.id} name={comment.author.displayName} size={34} />
+      <ProfileLink user={comment.author}>
+        <Avatar id={comment.author.id} name={comment.author.displayName} size={34} />
+      </ProfileLink>
       <div className={c.bubble}>
         <div className={c.meta}>
-          <span className={c.author}>{comment.author.displayName}</span>
+          <ProfileLink user={comment.author} label={false}>
+            <span className={c.author}>{comment.author.displayName}</span>
+          </ProfileLink>
           <span className={c.time}>{timeAgo(comment.createdAt)}</span>
         </div>
         <p className={c.body}>{comment.body}</p>

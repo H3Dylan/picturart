@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Ce qui alimente l'écran Activité (et, selon les préférences, les notifications push). */
-export const NOTIFICATION_TYPES = ['post', 'reaction', 'comment', 'member'] as const;
+export const NOTIFICATION_TYPES = ['post', 'reaction', 'comment', 'member', 'memory'] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 /** Réglages « Me prévenir quand… » de l'écran Mon profil (notifications push). */
@@ -25,6 +25,7 @@ export const PREF_OF_TYPE: Record<NotificationType, keyof NotificationPrefs | nu
   reaction: 'reactions',
   comment: 'comments',
   member: null,
+  memory: 'memories',
 };
 
 export interface NotificationDto {
@@ -32,7 +33,8 @@ export interface NotificationDto {
   type: NotificationType;
   createdAt: string;
   read: boolean;
-  actor: { id: string; displayName: string };
+  /** Absent pour un souvenir (rien n'a été fait par quelqu'un). */
+  actor: { id: string; displayName: string } | null;
   event: { id: string; name: string };
   postId: string | null;
   /** Vignette : la photo réagie, sinon le premier média prêt du post. */
@@ -40,7 +42,9 @@ export interface NotificationDto {
   /** Réaction : sur le post entier, ou sur une photo ou une vidéo précise. */
   target: 'post' | 'photo' | 'video' | null;
   emoji: string | null;
-  /** Début du commentaire. */
+  /** Réaction perso utilisée (sinon `emoji` est un emoji de base). */
+  customReaction: { id: string; name: string } | null;
+  /** Début du commentaire ; jour du souvenir (AAAA-MM-JJ) pour un souvenir. */
   excerpt: string | null;
   /** Contenu d'un post. */
   photos: number;
@@ -78,6 +82,11 @@ export interface PushPayload {
   unread: number;
 }
 
+const capitalizeIfMemory = (n: NotificationDto) => {
+  const text = describeNotification(n);
+  return n.actor ? text : text.charAt(0).toUpperCase() + text.slice(1);
+};
+
 const plural = (n: number, one: string, many: string) => `${n} ${n > 1 ? many : one}`;
 
 /** « 6 photos », « 2 vidéos », « 3 photos et 1 vidéo ». */
@@ -100,18 +109,31 @@ export function describeNotification(n: NotificationDto) {
     case 'post':
       return `a posté ${mediaSummary(n.photos, n.videos)} dans ${n.event.name}`;
     case 'reaction':
-      return `a réagi ${n.emoji ?? ''} à ${TARGETS[n.target ?? 'post']}`;
+      return `a réagi ${n.customReaction ? `« ${n.customReaction.name} »` : (n.emoji ?? '')} à ${TARGETS[n.target ?? 'post']}`;
     case 'comment':
       return n.excerpt ? `a commenté : « ${n.excerpt} »` : 'a commenté ton post';
     case 'member':
       return `a rejoint ${n.event.name}`;
+    case 'memory': {
+      const years = n.excerpt ? yearsBetween(n.excerpt, n.createdAt) : 1;
+      return `${years} an${years > 1 ? 's' : ''} déjà : ${n.event.name}, le ${frenchDate(n.excerpt)}`;
+    }
   }
 }
+
+const yearsBetween = (day: string, iso: string) =>
+  Math.max(1, Number(iso.slice(0, 4)) - Number(day.slice(0, 4)));
+
+const frenchDate = (day: string | null) => (day ? day.split('-').reverse().join('.') : '');
+
+/** Nom affiché de l'auteur (« Souvenir » quand personne n'est à l'origine). */
+export const actorName = (n: NotificationDto) => n.actor?.displayName ?? 'Souvenir';
 
 /** Où mène une notification. */
 export function notificationLink(n: NotificationDto) {
   if (n.type === 'comment' && n.postId) return `/posts/${n.postId}/commentaires`;
   if (n.type === 'member') return `/evenements/${n.event.id}/membres`;
+  if (n.type === 'memory') return `/evenements/${n.event.id}`;
   return `/evenements/${n.event.id}?vue=posts`;
 }
 
@@ -127,7 +149,7 @@ export function summarizeForPush(items: NotificationDto[], unread: number): Push
   const tag = oneEvent ? `event-${last.event.id}` : 'activite';
 
   if (items.every((n) => n.type === 'post')) {
-    const names = [...new Set(items.map((n) => n.actor.displayName))];
+    const names = [...new Set(items.map(actorName))];
     const who =
       names.length === 1
         ? names[0]
@@ -149,7 +171,7 @@ export function summarizeForPush(items: NotificationDto[], unread: number): Push
   const others = items.length - 1;
   return {
     title: oneEvent ? last.event.name : "Pictur'Art",
-    body: `${last.actor.displayName} ${describeNotification(last)}${others ? ` · et ${plural(others, 'autre nouveauté', 'autres nouveautés')}` : ''}`,
+    body: `${last.actor ? `${last.actor.displayName} ` : ''}${capitalizeIfMemory(last)}${others ? ` · et ${plural(others, 'autre nouveauté', 'autres nouveautés')}` : ''}`,
     url: items.length === 1 ? notificationLink(last) : '/activite',
     tag,
     unread,

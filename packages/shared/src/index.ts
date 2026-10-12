@@ -26,8 +26,21 @@ export {
   updateEventSchema,
   updateMemberSchema,
 } from './events.ts';
+export {
+  type CreateCustomReactionInput,
+  type CustomReactionDto,
+  createCustomReactionSchema,
+  customReactionImageUrl,
+  MAX_CUSTOM_REACTIONS_PER_USER,
+  type MemoryDto,
+  memoryLabel,
+  type ProfileDto,
+  type ProfileMediaItem,
+  type ProfileMediaPage,
+} from './fun.ts';
 export { type Health, healthSchema } from './health.ts';
 export {
+  actorName,
   DEFAULT_NOTIFICATION_PREFS,
   describeNotification,
   markReadSchema,
@@ -70,11 +83,16 @@ export {
 } from './posts.ts';
 export {
   type CommentDto,
+  type CustomReactionKey,
   commentSchema,
+  customReactionId,
+  customReactionKey,
+  isCustomReaction,
   type PlancheItem,
   REACTION_EMOJIS,
   type ReactionCount,
   type ReactionEmoji,
+  type ReactionKey,
   type Reactions,
   type RealtimeMessage,
   reactionSchema,

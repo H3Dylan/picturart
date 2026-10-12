@@ -4,7 +4,7 @@ import {
   type MediaDto,
   type PostDto,
   type PostsPage,
-  type ReactionEmoji,
+  type ReactionKey,
   type Reactions,
 } from '@picturart/shared';
 import { and, asc, count, desc, eq, inArray, isNull, lt, or, type SQL } from 'drizzle-orm';
@@ -43,9 +43,9 @@ function groupReactions(
     return entry;
   };
   for (const row of rows) {
-    get(row.target).counts.push({ emoji: row.emoji as ReactionEmoji, count: Number(row.total) });
+    get(row.target).counts.push({ emoji: row.emoji as ReactionKey, count: Number(row.total) });
   }
-  for (const row of mine) get(row.target).mine = row.emoji as ReactionEmoji;
+  for (const row of mine) get(row.target).mine = row.emoji as ReactionKey;
   for (const entry of byTarget.values()) entry.counts.sort((a, b) => b.count - a.count);
   return byTarget;
 }

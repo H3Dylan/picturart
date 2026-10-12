@@ -1,8 +1,9 @@
-import { type MediaKind, mediaUrl, type ReactionEmoji } from '@picturart/shared';
-import { ChevronLeft, ChevronRight, Download, MessageCircle, X } from 'lucide-react';
+import { type MediaKind, mediaUrl, type ReactionKey } from '@picturart/shared';
+import { ChevronLeft, ChevronRight, Download, MessageCircle, Sticker, X } from 'lucide-react';
 import { type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { Avatar } from '../components/Avatar.tsx';
+import { ProfileLink } from '../components/ProfileLink.tsx';
 import { applyReaction, ReactionBar } from '../components/ReactionBar.tsx';
 import ui from '../components/ui.module.css';
 import { timeAgo } from '../lib/format.ts';
@@ -27,10 +28,12 @@ export function PostViewerPage() {
         .map((m) => ({ mediaId: m.id, postId, kind: m.kind })),
     [post.data, postId],
   );
+  // L'index peut être un identifiant de média (lien depuis un profil)
+  const position = /^d+$/.test(index) ? Number(index) : items.findIndex((i) => i.mediaId === index);
   return (
     <Viewer
       items={items}
-      index={Number(index)}
+      index={Math.max(0, position)}
       loading={post.isPending}
       hrefFor={(i) => `/posts/${postId}/photos/${i}`}
     />
@@ -118,7 +121,7 @@ function Viewer({ items, index, loading, hrefFor }: ViewerProps) {
     }
   }, [items, index]);
 
-  function onReact(emoji: ReactionEmoji | null) {
+  function onReact(emoji: ReactionKey | null) {
     setReactions((r) => (r ? applyReaction(r, emoji) : r));
     react.mutate(emoji, { onSuccess: setReactions });
   }
@@ -240,7 +243,9 @@ function Viewer({ items, index, loading, hrefFor }: ViewerProps) {
       {post.data && (
         <footer className={v.bottom}>
           <div className={v.author}>
-            <Avatar id={post.data.author.id} name={post.data.author.displayName} size={34} />
+            <ProfileLink user={post.data.author}>
+              <Avatar id={post.data.author.id} name={post.data.author.displayName} size={34} />
+            </ProfileLink>
             <div>
               <div className={v.name}>{post.data.author.displayName}</div>
               <div className={v.meta}>
@@ -256,6 +261,15 @@ function Viewer({ items, index, loading, hrefFor }: ViewerProps) {
               {post.data.commentCount}
               <span className={ui.visuallyHidden}> commentaires</span>
             </Link>
+            {current && (
+              <Link
+                to={`/reactions/nouvelle?media=${current.mediaId}`}
+                className={v.comments}
+                aria-label="Créer une réaction perso avec cette photo"
+              >
+                <Sticker size={18} strokeWidth={1.8} aria-hidden="true" />
+              </Link>
+            )}
           </div>
         </footer>
       )}

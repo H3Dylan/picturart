@@ -1,4 +1,4 @@
-import { type MediaDto, mediaUrl, type PostDto, type ReactionEmoji } from '@picturart/shared';
+import { type MediaDto, mediaUrl, type PostDto, type ReactionKey } from '@picturart/shared';
 import { MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -8,6 +8,7 @@ import { useUploads } from '../lib/uploads.ts';
 import { useDoubleTap } from '../lib/useDoubleTap.ts';
 import { Avatar } from './Avatar.tsx';
 import styles from './PostCard.module.css';
+import { ProfileLink } from './ProfileLink.tsx';
 import { applyReaction, ReactionBar } from './ReactionBar.tsx';
 import ui from './ui.module.css';
 import { VideoBadge } from './VideoBadge.tsx';
@@ -38,7 +39,7 @@ export function PostCard({ post, isAuthor, onDelete, deleting, showEvent = false
     setReactions(post.reactions);
   }
 
-  function onReact(emoji: ReactionEmoji | null) {
+  function onReact(emoji: ReactionKey | null) {
     setReactions((current) => applyReaction(current, emoji));
     react.mutate(emoji, { onSuccess: setReactions });
   }
@@ -51,10 +52,14 @@ export function PostCard({ post, isAuthor, onDelete, deleting, showEvent = false
   return (
     <article className={`${ui.card} ${styles.card}`}>
       <header className={styles.header}>
-        <Avatar id={post.author.id} name={post.author.displayName} />
+        <ProfileLink user={post.author}>
+          <Avatar id={post.author.id} name={post.author.displayName} />
+        </ProfileLink>
         <div className={styles.who}>
           <div className={styles.name}>
-            {post.author.displayName}{' '}
+            <ProfileLink user={post.author} label={false}>
+              {post.author.displayName}
+            </ProfileLink>{' '}
             <span className={styles.muted}>
               a posté {mediaCountLabel(post.media.map((m) => m.kind))}
             </span>

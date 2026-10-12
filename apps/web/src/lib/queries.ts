@@ -1,18 +1,23 @@
 import type {
   CommentDto,
+  CreateCustomReactionInput,
   CreatedInvite,
   CreateEventInput,
   CreatePostInput,
+  CustomReactionDto,
   EventDetail,
   EventSummary,
   InvitePreview,
   LoginInput,
   Me,
+  MemoryDto,
   NotificationsPage,
   PlancheItem,
   PostDto,
   PostsPage,
-  ReactionEmoji,
+  ProfileDto,
+  ProfileMediaPage,
+  ReactionKey,
   Reactions,
   Role,
   SignupInput,
@@ -33,6 +38,10 @@ export const keys = {
   planche: (eventId: string) => ['planche', eventId] as const,
   invite: (token: string) => ['invite', token] as const,
   notifications: ['notifications'] as const,
+  customReactions: ['custom-reactions'] as const,
+  memories: ['memories'] as const,
+  profile: (id: string) => ['profile', id] as const,
+  profileMedia: (id: string) => ['profile-media', id] as const,
   unread: ['unread'] as const,
 };
 
@@ -113,7 +122,7 @@ export function useReact(target: {
 }) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (emoji: ReactionEmoji | null) =>
+    mutationFn: (emoji: ReactionKey | null) =>
       api<Reactions>(`/${target.kind === 'post' ? 'posts' : 'media'}/${target.id}/reaction`, {
         method: emoji ? 'PUT' : 'DELETE',
         ...(emoji && { body: { emoji } }),
@@ -317,5 +326,67 @@ export function useMuteEvent(eventId: string) {
       client.setQueryData<EventDetail>(keys.event(eventId), (d) => (d ? { ...d, muted } : d));
       client.invalidateQueries({ queryKey: keys.events });
     },
+  });
+}
+
+// ---- Réactions perso -------------------------------------------------------------------
+export function useCustomReactions() {
+  return useQuery({
+    queryKey: keys.customReactions,
+    queryFn: () => api<CustomReactionDto[]>('/custom-reactions'),
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateCustomReaction() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateCustomReactionInput) =>
+      api<CustomReactionDto>('/custom-reactions', { method: 'POST', body: input }),
+    onSuccess: () => client.invalidateQueries({ queryKey: keys.customReactions }),
+  });
+}
+
+export function useDeleteCustomReaction() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/custom-reactions/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: keys.customReactions });
+      // Elle disparaît des posts où elle servait
+      client.invalidateQueries({ queryKey: keys.feed });
+      client.invalidateQueries({ queryKey: ['posts'] });
+      client.invalidateQueries({ queryKey: ['post'] });
+    },
+  });
+}
+
+// ---- Souvenirs et profils --------------------------------------------------------------
+export function useMemories() {
+  return useQuery({
+    queryKey: keys.memories,
+    queryFn: () => api<MemoryDto[]>('/memories'),
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function useProfile(id: string) {
+  return useQuery({
+    queryKey: keys.profile(id),
+    queryFn: () => api<ProfileDto>(`/users/${id}`),
+    enabled: Boolean(id),
+  });
+}
+
+export function useProfileMedia(id: string) {
+  return useInfiniteQuery({
+    queryKey: keys.profileMedia(id),
+    queryFn: ({ pageParam }) =>
+      api<ProfileMediaPage>(
+        `/users/${id}/media${pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : ''}`,
+      ),
+    initialPageParam: '',
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    enabled: Boolean(id),
   });
 }

@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Avatar } from '../components/Avatar.tsx';
 import { InvitePanel } from '../components/InvitePanel.tsx';
+import { ProfileLink } from '../components/ProfileLink.tsx';
 import ui from '../components/ui.module.css';
 import {
   useCreateInvite,
@@ -127,7 +128,9 @@ function MemberRow({ member, isMe, canEdit, onRole, onRemove }: MemberRowProps) 
       className={styles.headerRow}
       style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}
     >
-      <Avatar id={member.id} name={member.displayName} size={36} />
+      <ProfileLink user={member}>
+        <Avatar id={member.id} name={member.displayName} size={36} />
+      </ProfileLink>
       <span style={{ flex: 1, fontWeight: 600, fontSize: 15 }}>
         {member.displayName}
         {isMe && (

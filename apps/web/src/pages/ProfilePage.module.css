@@ -37,3 +37,17 @@
   font-size: 13px;
   color: var(--ink-muted);
 }
+
+.reaction {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.empty {
+  margin: 0 4px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}

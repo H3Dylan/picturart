@@ -7,7 +7,7 @@ Le réseau social privé de la bande : vos soirées, vos voyages et vos têtes, 
 - Notifications push, souvenirs « il y a 1 an »
 - PWA installable sur iOS et Android, auto-hébergée
 
-> 🚧 En développement — **M0** à **M5 · PWA & notifications** ✅ en ligne sur [pictur.dylanbouillon.fr](https://pictur.dylanbouillon.fr), prochain jalon : **M6 · Fun** (réactions perso, souvenirs, stats). Réécriture complète du projet de cours Pictur'Art.
+> 🚧 En développement — **M0** à **M6 · Fun** ✅ en ligne sur [pictur.dylanbouillon.fr](https://pictur.dylanbouillon.fr), prochaine étape : **bêta avec la bande**. Réécriture complète du projet de cours Pictur'Art.
 
 ## Documentation
 

@@ -1,8 +1,8 @@
-import type { NotificationDto } from '@picturart/shared';
+import { customReactionId, isCustomReaction, type NotificationDto } from '@picturart/shared';
 import { and, asc, count, desc, eq, inArray, isNull, ne, or, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Db } from '../db/client.ts';
-import { events, media, notifications, posts, users } from '../db/schema.ts';
+import { customReactions, events, media, notifications, posts, users } from '../db/schema.ts';
 
 export type NotificationRow = typeof notifications.$inferSelect;
 
@@ -24,7 +24,7 @@ export async function loadNotifications(
       reactedKind: reacted.kind,
     })
     .from(notifications)
-    .innerJoin(users, eq(users.id, notifications.actorId))
+    .leftJoin(users, eq(users.id, notifications.actorId))
     .innerJoin(events, eq(events.id, notifications.eventId))
     .leftJoin(posts, eq(posts.id, notifications.postId))
     .leftJoin(reacted, eq(reacted.id, notifications.mediaId))
@@ -47,6 +47,22 @@ export async function loadNotifications(
           .orderBy(media.postId, asc(media.position)),
       ])
     : [[], []];
+  // Noms des réactions perso utilisées
+  const customIds = [
+    ...new Set(
+      rows.flatMap((r) =>
+        r.row.emoji && isCustomReaction(r.row.emoji) ? [customReactionId(r.row.emoji)] : [],
+      ),
+    ),
+  ];
+  const customs = customIds.length
+    ? await db
+        .select({ id: customReactions.id, name: customReactions.name })
+        .from(customReactions)
+        .where(inArray(customReactions.id, customIds))
+    : [];
+  const customName = new Map(customs.map((c) => [c.id, c.name]));
+
   const countOf = (postId: string, kind: 'photo' | 'video') =>
     Number(kinds.find((k) => k.postId === postId && k.kind === kind)?.total ?? 0);
   const thumbOf = new Map(thumbs.map((t) => [t.postId, t.id]));
@@ -64,6 +80,13 @@ export async function loadNotifications(
       mediaId: row.mediaId ?? (row.postId ? (thumbOf.get(row.postId) ?? null) : null),
       target: row.type === 'reaction' ? (row.mediaId ? (reactedKind ?? 'photo') : 'post') : null,
       emoji: row.emoji,
+      customReaction:
+        row.emoji && isCustomReaction(row.emoji)
+          ? {
+              id: customReactionId(row.emoji),
+              name: customName.get(customReactionId(row.emoji)) ?? 'réaction perso',
+            }
+          : null,
       excerpt: row.excerpt,
       photos: row.postId ? countOf(row.postId, 'photo') : 0,
       videos: row.postId ? countOf(row.postId, 'video') : 0,

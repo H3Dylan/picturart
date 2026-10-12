@@ -85,3 +85,17 @@
   object-fit: cover;
   background: var(--film);
 }
+
+/* Souvenir : pas d'auteur, une étoile sur fond rose (DA) */
+.memory {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--memory-label);
+  color: #2a2420;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 17px;
+}

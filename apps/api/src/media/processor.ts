@@ -11,6 +11,8 @@ import type { MediaStorage } from './storage.ts';
 import { run } from './tools.ts';
 
 sharp.concurrency(2);
+// Pas de cache de fichiers : un fichier lu ne reste pas ouvert (suppression, remplacement)
+sharp.cache({ files: 0 });
 
 export type MediaRow = typeof media.$inferSelect;
 export type Log = Pick<FastifyBaseLogger, 'info' | 'warn' | 'error'>;

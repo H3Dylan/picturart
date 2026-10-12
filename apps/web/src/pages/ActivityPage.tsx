@@ -1,4 +1,5 @@
 import {
+  actorName,
   describeNotification,
   mediaUrl,
   type NotificationDto,
@@ -108,11 +109,17 @@ export function ActivityPage() {
                   }}
                 >
                   <span className={a.avatar}>
-                    <Avatar id={n.actor.id} name={n.actor.displayName} size={40} />
+                    {n.actor ? (
+                      <Avatar id={n.actor.id} name={n.actor.displayName} size={40} />
+                    ) : (
+                      <span className={a.memory} aria-hidden="true">
+                        ★
+                      </span>
+                    )}
                     {!n.read && <span className={a.unread} />}
                   </span>
                   <span className={a.text}>
-                    <strong>{n.actor.displayName}</strong> {describeNotification(n)}
+                    <strong>{actorName(n)}</strong> {describeNotification(n)}
                     {!n.read && <span className={ui.visuallyHidden}> (non lue)</span>}
                     <span className={a.when}>{stamp(n.createdAt, now.getTime())}</span>
                   </span>

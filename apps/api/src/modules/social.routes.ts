@@ -9,10 +9,11 @@ import type { FastifyInstance } from 'fastify';
 import { requireUser } from '../auth/plugin.ts';
 import type { Db } from '../db/client.ts';
 import { comments, media, mediaReactions, postReactions, posts, users } from '../db/schema.ts';
-import { forbidden, notFound, parse } from '../lib/errors.ts';
+import { forbidden, HttpError, notFound, parse } from '../lib/errors.ts';
 import { quietly } from '../notifications/notifier.ts';
 import type { RealtimeHub } from '../realtime/hub.ts';
 import { isUuid, requireMember } from './access.ts';
+import { reactionExists } from './custom-reactions.routes.ts';
 import { findVisiblePost, loadPosts } from './posts.routes.ts';
 
 export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
@@ -37,6 +38,9 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
     const user = requireUser(request);
     const { post } = await findVisiblePost(db, request.params.id, user.id);
     const { emoji } = parse(reactionSchema, request.body);
+    if (!(await reactionExists(db, emoji))) {
+      throw new HttpError(400, 'validation', 'Cette réaction perso n’existe plus.');
+    }
     await db
       .insert(postReactions)
       .values({ postId: post.id, userId: user.id, emoji })
@@ -72,6 +76,9 @@ export function socialRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
     const user = requireUser(request);
     const row = await findVisibleMedia(request.params.id, user.id);
     const { emoji } = parse(reactionSchema, request.body);
+    if (!(await reactionExists(db, emoji))) {
+      throw new HttpError(400, 'validation', 'Cette réaction perso n’existe plus.');
+    }
     await db
       .insert(mediaReactions)
       .values({ mediaId: row.mediaId, userId: user.id, emoji })
