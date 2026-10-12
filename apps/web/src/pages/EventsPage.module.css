@@ -17,6 +17,11 @@
   gap: var(--space-3);
 }
 
+.link {
+  color: var(--ink);
+  text-decoration: none;
+}
+
 .cover {
   width: 64px;
   height: 64px;

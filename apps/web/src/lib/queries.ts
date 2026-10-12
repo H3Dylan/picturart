@@ -1,21 +1,89 @@
 import type {
   CreatedInvite,
   CreateEventInput,
+  CreatePostInput,
+  EventDetail,
   EventSummary,
   InvitePreview,
   LoginInput,
   Me,
+  PostDto,
+  PostsPage,
+  Role,
   SignupInput,
   UpdateMeInput,
 } from '@picturart/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, api } from './api.ts';
 
 export const keys = {
   me: ['me'] as const,
   events: ['events'] as const,
+  event: (id: string) => ['event', id] as const,
+  posts: (eventId: string) => ['posts', eventId] as const,
   invite: (token: string) => ['invite', token] as const,
 };
+
+export function useEvent(id: string) {
+  return useQuery({ queryKey: keys.event(id), queryFn: () => api<EventDetail>(`/events/${id}`) });
+}
+
+export function useEventPosts(eventId: string) {
+  return useInfiniteQuery({
+    queryKey: keys.posts(eventId),
+    queryFn: ({ pageParam }) =>
+      api<PostsPage>(
+        `/events/${eventId}/posts${pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : ''}`,
+      ),
+    initialPageParam: '',
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    // Tant que des photos se développent, on rafraîchit régulièrement
+    refetchInterval: (query) =>
+      query.state.data?.pages.some((page) =>
+        page.posts.some((post) => post.media.some((m) => m.status !== 'ready')),
+      )
+        ? 3000
+        : false,
+  });
+}
+
+export function useCreatePost() {
+  return useMutation({
+    mutationFn: (input: CreatePostInput) => api<PostDto>('/posts', { method: 'POST', body: input }),
+  });
+}
+
+export function useDeletePost(eventId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => api<void>(`/posts/${postId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: keys.posts(eventId) });
+      client.invalidateQueries({ queryKey: keys.event(eventId) });
+    },
+  });
+}
+
+export function useUpdateMemberRole(eventId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: Role }) =>
+      api<EventDetail>(`/events/${eventId}/members/${userId}`, { method: 'PATCH', body: { role } }),
+    onSuccess: (detail) => client.setQueryData(keys.event(eventId), detail),
+  });
+}
+
+export function useRemoveMember(eventId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api<void>(`/events/${eventId}/members/${userId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: keys.event(eventId) });
+      client.invalidateQueries({ queryKey: keys.events });
+    },
+  });
+}
 
 /** L'utilisateur connecté, ou `null` si personne n'est connecté. */
 export function useMe() {

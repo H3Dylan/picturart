@@ -1,0 +1,27 @@
+.members {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stack {
+  display: flex;
+}
+
+.ring {
+  display: inline-flex;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+}
+
+.ring + .ring {
+  margin-left: -8px;
+}
+
+/* Le bouton principal reste accessible au-dessus de la barre de navigation */
+.cta {
+  position: sticky;
+  bottom: calc(100px + env(safe-area-inset-bottom));
+  margin-top: auto;
+}

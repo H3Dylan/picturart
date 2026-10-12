@@ -1,11 +1,12 @@
-import { type CreatedInvite, type EventSummary, ROLE_LABELS } from '@picturart/shared';
-import { Copy, Plus, Share } from 'lucide-react';
+import { type EventSummary, ROLE_LABELS } from '@picturart/shared';
+import { ChevronRight, Plus } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
+import { Link } from 'react-router';
 import { TextField } from '../components/TextField.tsx';
 import ui from '../components/ui.module.css';
 import { ApiError } from '../lib/api.ts';
 import { avatarColor, formatEventDates } from '../lib/format.ts';
-import { useCreateEvent, useCreateInvite, useEvents } from '../lib/queries.ts';
+import { useCreateEvent, useEvents } from '../lib/queries.ts';
 import ev from './EventsPage.module.css';
 import styles from './pages.module.css';
 
@@ -57,89 +58,29 @@ export function EventsPage() {
 }
 
 function EventCard({ event }: { event: EventSummary }) {
-  const [invite, setInvite] = useState<CreatedInvite | null>(null);
-  const createInvite = useCreateInvite();
   const meta = [formatEventDates(event.startsOn, event.endsOn), event.location]
     .filter(Boolean)
     .join(' · ');
-  const canInvite = event.role !== 'viewer';
 
   return (
-    <li className={`${ui.card} ${ev.card}`}>
-      <div className={ev.row}>
+    <li>
+      <Link to={`/evenements/${event.id}`} className={`${ui.card} ${ev.card} ${ev.row} ${ev.link}`}>
         <span
           className={ev.cover}
           style={{ background: avatarColor(event.id) }}
           aria-hidden="true"
         />
-        <div className={ev.info}>
-          <h2 className={ev.name}>{event.name}</h2>
-          {meta && <p className={ui.metaAccent}>{meta}</p>}
-          <p className={ev.stats}>
+        <span className={ev.info}>
+          <span className={ev.name}>{event.name}</span>
+          {meta && <span className={ui.metaAccent}>{meta}</span>}
+          <span className={ev.stats}>
             {event.memberCount} {event.memberCount > 1 ? 'potes' : 'pote'} ·{' '}
             {ROLE_LABELS[event.role]}
-          </p>
-        </div>
-        {canInvite && !invite && (
-          <button
-            type="button"
-            className={`${ui.buttonSecondary} ${ui.buttonSmall}`}
-            onClick={() => createInvite.mutate(event.id, { onSuccess: setInvite })}
-            disabled={createInvite.isPending}
-          >
-            Inviter
-          </button>
-        )}
-      </div>
-      {createInvite.error && <p className={ui.fieldError}>{createInvite.error.message}</p>}
-      {invite && <InvitePanel invite={invite} eventName={event.name} />}
+          </span>
+        </span>
+        <ChevronRight size={20} strokeWidth={1.8} aria-hidden="true" />
+      </Link>
     </li>
-  );
-}
-
-function InvitePanel({ invite, eventName }: { invite: CreatedInvite; eventName: string }) {
-  const [copied, setCopied] = useState(false);
-  const canShare = typeof navigator.share === 'function';
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(invite.url);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  }
-
-  async function share() {
-    try {
-      await navigator.share({
-        title: eventName,
-        text: `Rejoins « ${eventName} » sur Pictur'Art`,
-        url: invite.url,
-      });
-    } catch {
-      // partage annulé
-    }
-  }
-
-  return (
-    <div className={ev.invite}>
-      <p className={ui.meta}>Lien d'invitation</p>
-      <p className={ev.url}>{invite.url}</p>
-      <div className={ev.inviteActions}>
-        <button type="button" className={`${ui.buttonSecondary} ${ui.buttonSmall}`} onClick={copy}>
-          <Copy size={16} strokeWidth={1.8} aria-hidden="true" />
-          {copied ? 'Copié !' : 'Copier'}
-        </button>
-        {canShare && (
-          <button type="button" className={`${ui.button} ${ui.buttonSmall}`} onClick={share}>
-            <Share size={16} strokeWidth={1.8} aria-hidden="true" />
-            Partager
-          </button>
-        )}
-      </div>
-      <p className={ev.stats}>Expire dans 7 jours · les nouveaux arrivent en contributeur</p>
-    </div>
   );
 }
 

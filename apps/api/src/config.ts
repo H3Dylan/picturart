@@ -8,6 +8,8 @@ const envSchema = z.object({
   /** Origine publique de la PWA : liens d'invitation et protection CSRF. */
   APP_ORIGIN: z.url().default('http://localhost:5173'),
   SESSION_DAYS: z.coerce.number().int().positive().default(90),
+  /** Dossier des médias : originaux, vignettes, envois en cours. */
+  MEDIA_DIR: z.string().default('./.data/media'),
 });
 
 export type Config = z.infer<typeof envSchema> & { cookieSecure: boolean };

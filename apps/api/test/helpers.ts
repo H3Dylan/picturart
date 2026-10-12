@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { LightMyRequestResponse } from 'fastify';
 import { buildApp } from '../src/app.ts';
 import { hashPassword } from '../src/auth/password.ts';
@@ -9,7 +12,12 @@ export const ORIGIN = 'https://pictur.test';
 
 /** Application complète sur un PostgreSQL embarqué en mémoire (PGlite), migrations appliquées. */
 export async function createTestApp() {
-  const config = loadConfig({ DATABASE_URL: 'pglite://memory', APP_ORIGIN: ORIGIN });
+  const mediaDir = await mkdtemp(join(tmpdir(), 'picturart-test-'));
+  const config = loadConfig({
+    DATABASE_URL: 'pglite://memory',
+    APP_ORIGIN: ORIGIN,
+    MEDIA_DIR: mediaDir,
+  });
   const database = await openDatabase(config.DATABASE_URL);
   const app = await buildApp({ config, database });
 
@@ -37,6 +45,7 @@ export async function createTestApp() {
   async function close() {
     await app.close();
     await database.close();
+    await rm(mediaDir, { recursive: true, force: true });
   }
 
   return { app, database, createUser, login, close };

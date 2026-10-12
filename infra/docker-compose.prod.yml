@@ -23,6 +23,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL manquant}
       APP_ORIGIN: https://pictur.dylanbouillon.fr
+      MEDIA_DIR: /data/media
       PORT: 3000
     volumes:
       - /srv/picturart/media:/data/media

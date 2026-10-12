@@ -24,6 +24,31 @@ export const createEventSchema = z
   });
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
+export const updateEventSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Donne un nom à l’événement').max(60, '60 caractères maximum'),
+    startsOn: isoDate.nullable(),
+    endsOn: isoDate.nullable(),
+    location: z.string().trim().max(80, '80 caractères maximum').nullable(),
+  })
+  .partial();
+export type UpdateEventInput = z.infer<typeof updateEventSchema>;
+
+export const updateMemberSchema = z.object({ role: z.enum(ROLES) });
+
+export interface Member {
+  id: string;
+  displayName: string;
+  role: Role;
+  joinedAt: string;
+}
+
+export interface EventDetail extends EventSummary {
+  photoCount: number;
+  postCount: number;
+  members: Member[];
+}
+
 export interface EventSummary {
   id: string;
   name: string;

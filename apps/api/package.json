@@ -14,11 +14,16 @@
   "dependencies": {
     "@fastify/cookie": "^11.1.3",
     "@fastify/rate-limit": "^11.2.1",
+    "@fastify/static": "^10.1.6",
     "@node-rs/argon2": "^2.2.2",
     "@picturart/shared": "workspace:*",
+    "@tus/file-store": "^2.1.1",
+    "@tus/server": "^2.4.5",
     "drizzle-orm": "^0.45.4",
+    "exifr": "^7.1.3",
     "fastify": "^5.12.5",
     "postgres": "^3.4.9",
+    "sharp": "^0.35.5",
     "zod": "^4.6.6"
   },
   "devDependencies": {

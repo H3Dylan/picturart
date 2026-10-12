@@ -1,0 +1,26 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.url {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--radius-xs);
+  background: var(--reaction-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+}

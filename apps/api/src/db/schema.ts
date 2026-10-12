@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   date,
   index,
   integer,
@@ -16,6 +17,14 @@ const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull(
 
 export const themeEnum = pgEnum('theme', ['auto', 'light', 'dark']);
 export const roleEnum = pgEnum('event_role', ['admin', 'contributor', 'viewer']);
+export const mediaKindEnum = pgEnum('media_kind', ['photo', 'video']);
+export const mediaStatusEnum = pgEnum('media_status', [
+  'uploading',
+  'processing',
+  'ready',
+  'failed',
+]);
+export const variantEnum = pgEnum('media_variant', ['thumb', 'display']);
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -92,4 +101,68 @@ export const invites = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex('invites_token_idx').on(t.tokenHash)],
+);
+
+export const posts = pgTable(
+  'posts',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    eventId: uuid('event_id')
+      .notNull()
+      .references(() => events.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    caption: text('caption').notNull().default(''),
+    createdAt: createdAt(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    /** Corbeille : supprimé définitivement après 30 jours. */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => [index('posts_event_created_idx').on(t.eventId, t.createdAt)],
+);
+
+export const media = pgTable(
+  'media',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    uploaderId: uuid('uploader_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: mediaKindEnum('kind').notNull().default('photo'),
+    status: mediaStatusEnum('status').notNull().default('uploading'),
+    position: integer('position').notNull(),
+    originalName: text('original_name').notNull(),
+    declaredMime: text('declared_mime').notNull(),
+    declaredSize: bigint('declared_size', { mode: 'number' }).notNull(),
+    /** Chemin relatif au dossier des médias, une fois l'envoi terminé. */
+    originalPath: text('original_path'),
+    mime: text('mime'),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }),
+    sha256: text('sha256'),
+    width: integer('width'),
+    height: integer('height'),
+    takenAt: timestamp('taken_at', { withTimezone: true }),
+    error: text('error'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('media_post_idx').on(t.postId, t.position), index('media_sha_idx').on(t.sha256)],
+);
+
+export const mediaVariants = pgTable(
+  'media_variants',
+  {
+    mediaId: uuid('media_id')
+      .notNull()
+      .references(() => media.id, { onDelete: 'cascade' }),
+    variant: variantEnum('variant').notNull(),
+    path: text('path').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.mediaId, t.variant] })],
 );

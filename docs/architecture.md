@@ -37,6 +37,8 @@ flowchart LR
 - **Le worker** fait le travail lourd en arrière-plan : vignettes, vidéos, notifications push, purge de la corbeille, souvenirs.
 - Les deux partagent le même code (monorepo) et communiquent par la base (file de jobs + `LISTEN/NOTIFY`).
 
+> **Décision M2** : pour les photos, le traitement (vignettes, ~250 ms par photo 4K) tourne dans une file en mémoire **à l'intérieur de l'API**, reprise automatiquement au redémarrage. C'est suffisant pour une dizaine de personnes et évite un service de plus. Le worker séparé arrivera avec les vidéos (M4), dont le transcodage est beaucoup plus lourd.
+
 Ce découpage suffit largement pour une dizaine d'utilisateurs, tout en restant propre : rien n'empêche plus tard de séparer les services.
 
 ---
@@ -270,7 +272,7 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 |---|---|---|
 | ✅ **M0 · Fondations** | Monorepo, CI, Docker, CT 107, Traefik, déploiement automatique | Une page « Pictur'Art arrive » en ligne sur `pictur.dylanbouillon.fr` |
 | ✅ **M1 · Comptes** | Invitations, inscription, connexion, profil, thème clair/sombre | La bande peut créer son compte |
-| **M2 · Événements & photos** | Événements, membres, rôles, création de post, envoi tus, vignettes | On peut poster des photos |
+| ✅ **M2 · Événements & photos** | Événements, membres, rôles, création de post, envoi tus, vignettes | On peut poster des photos |
 | **M3 · Social** | Fil, page événement (planche), visionneuse, réactions, commentaires, temps réel | L'expérience de base est complète |
 | **M4 · Vidéos & HEIC** | Transcodage QuickSync, HDR, HEIC | Les médias iPhone passent sans souci |
 | **M5 · PWA & notifs** | Installation, push regroupées, écran Activité | On est prévenu quand la bande poste |
