@@ -24,7 +24,7 @@ export const mediaStatusEnum = pgEnum('media_status', [
   'ready',
   'failed',
 ]);
-export const variantEnum = pgEnum('media_variant', ['thumb', 'display']);
+export const variantEnum = pgEnum('media_variant', ['thumb', 'display', 'video']);
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -146,10 +146,18 @@ export const media = pgTable(
     width: integer('width'),
     height: integer('height'),
     takenAt: timestamp('taken_at', { withTimezone: true }),
+    durationMs: integer('duration_ms'),
     error: text('error'),
+    /** File de traitement : un worker réserve le média (SKIP LOCKED) et note l'heure de prise en charge. */
+    attempts: integer('attempts').notNull().default(0),
+    processingStartedAt: timestamp('processing_started_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
-  (t) => [index('media_post_idx').on(t.postId, t.position), index('media_sha_idx').on(t.sha256)],
+  (t) => [
+    index('media_post_idx').on(t.postId, t.position),
+    index('media_sha_idx').on(t.sha256),
+    index('media_jobs_idx').on(t.kind, t.createdAt).where(sql`${t.status} = 'processing'`),
+  ],
 );
 
 export const mediaVariants = pgTable(

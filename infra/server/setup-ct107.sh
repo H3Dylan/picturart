@@ -35,10 +35,17 @@ pct create "$CTID" "local:vztmpl/$TEMPLATE" \
   --unprivileged 1 --features nesting=1,keyctl=1 \
   --onboot 1 --tags "docker;picturart"
 pct set "$CTID" -mp0 "$DATASET_PATH,mp=/srv/picturart/media"
-[ -e /dev/dri/renderD128 ] && pct set "$CTID" -dev0 /dev/dri/renderD128
-
 pct start "$CTID"
 sleep 5
+
+# iGPU (QuickSync) pour le worker : la carte appartient au groupe « render » du CT,
+# que le conteneur worker rejoint (group_add dans docker-compose.prod.yml)
+if [ -e /dev/dri/renderD128 ]; then
+  RENDER_GID=$(pct exec "$CTID" -- getent group render | cut -d: -f3)
+  pct set "$CTID" -dev0 "/dev/dri/renderD128,gid=${RENDER_GID}"
+  pct reboot "$CTID"
+  sleep 10
+fi
 
 echo ">> Installation dans le CT (Docker, utilisateur runner, secrets)"
 pct exec "$CTID" -- bash -s <<'IN_CT'

@@ -25,12 +25,36 @@ services:
       APP_ORIGIN: https://pictur.dylanbouillon.fr
       MEDIA_DIR: /data/media
       PORT: 3000
+      # Les médias sont traités par le service worker
+      WORKER_INLINE: 'false'
     volumes:
       - /srv/picturart/media:/data/media
     ports:
       - '3000:3000'
     depends_on:
       postgres:
+        condition: service_healthy
+
+  # Vignettes, HEIC et vidéos (ffmpeg + QuickSync de l'iGPU Intel), hors du processus de l'API
+  worker:
+    image: ghcr.io/h3dylan/picturart-worker:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL manquant}
+      MEDIA_DIR: /data/media
+      VIDEO_HWACCEL: auto
+    volumes:
+      - /srv/picturart/media:/data/media
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    # Groupe « render » du CT 107, propriétaire de la carte (dev0 … gid=992 côté Proxmox)
+    group_add:
+      - '992'
+    # Garde de la marge pour les autres services de l'Optiplex pendant un transcodage
+    cpus: 4
+    stop_grace_period: 30s
+    depends_on:
+      api:
         condition: service_healthy
 
   web:

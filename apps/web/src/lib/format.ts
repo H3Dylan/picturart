@@ -33,3 +33,24 @@ export function avatarColor(id: string) {
 export function initial(name: string) {
   return name.trim().charAt(0).toUpperCase() || '?';
 }
+
+/** Durée d'une vidéo : 0:42, 12:05, 1:02:03. */
+export function formatDuration(ms: number | null) {
+  if (ms === null) return '';
+  const total = Math.round(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = String(total % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
+
+/** « 3 photos », « 1 vidéo », « 2 photos et 1 vidéo ». */
+export function mediaCountLabel(kinds: readonly ('photo' | 'video')[]) {
+  const photos = kinds.filter((k) => k === 'photo').length;
+  const videos = kinds.length - photos;
+  const parts = [
+    photos ? `${photos} ${photos > 1 ? 'photos' : 'photo'}` : '',
+    videos ? `${videos} ${videos > 1 ? 'vidéos' : 'vidéo'}` : '',
+  ].filter(Boolean);
+  return parts.join(' et ');
+}

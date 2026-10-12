@@ -8,9 +8,9 @@ import { registerAuth } from './auth/plugin.ts';
 import type { Config } from './config.ts';
 import type { Database } from './db/client.ts';
 import { HttpError } from './lib/errors.ts';
-import { MediaQueue } from './media/queue.ts';
 import { MediaStorage } from './media/storage.ts';
 import { registerUploads } from './media/uploads.ts';
+import { DONE_CHANNEL, JOBS_CHANNEL, MediaWorker } from './media/worker.ts';
 import { authRoutes } from './modules/auth.routes.ts';
 import { eventDetailRoutes } from './modules/event-detail.routes.ts';
 import { eventsRoutes } from './modules/events.routes.ts';
@@ -23,7 +23,8 @@ import { realtimeRoutes } from './realtime/routes.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    mediaQueue: MediaQueue;
+    /** Worker intégré (développement, tests) ; absent en production, où il tourne à part. */
+    mediaWorker: MediaWorker | undefined;
     realtime: RealtimeHub;
   }
 }
@@ -40,11 +41,12 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
 
   const storage = new MediaStorage(config.MEDIA_DIR);
   await storage.init();
-  const queue = new MediaQueue(db, storage, app.log);
-  app.decorate('mediaQueue', queue);
   const hub = new RealtimeHub(db, app.log);
   app.decorate('realtime', hub);
-  queue.onReady = (mediaId) => void hub.publishMediaReady(mediaId);
+  const worker = config.workerInline
+    ? new MediaWorker({ database, storage, tools: config, log: app.log })
+    : undefined;
+  app.decorate('mediaWorker', worker);
 
   await app.register(cookie);
   await app.register(websocket, { options: { maxPayload: 4096 } });
@@ -95,11 +97,21 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
   socialRoutes(app, db, hub);
   realtimeRoutes(app, hub, config);
   mediaRoutes(app, db);
-  registerUploads(app, db, storage, queue);
+  registerUploads(app, db, storage, () => database.notify(JOBS_CHANNEL, ''));
 
-  // Reprend les traitements interrompus par un redémarrage
-  app.addHook('onReady', () => queue.resume());
-  app.addHook('onClose', () => queue.drained());
+  // Média traité par le worker (ici ou dans son conteneur) : prévenir les membres en direct
+  let unlisten: (() => Promise<void>) | undefined;
+  app.addHook('onReady', async () => {
+    unlisten = await database.listen(
+      DONE_CHANNEL,
+      (mediaId) => void hub.publishMediaReady(mediaId),
+    );
+    await worker?.start();
+  });
+  app.addHook('onClose', async () => {
+    await worker?.stop();
+    await unlisten?.();
+  });
 
   return app;
 }

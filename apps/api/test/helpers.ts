@@ -17,6 +17,9 @@ export async function createTestApp() {
     DATABASE_URL: 'pglite://memory',
     APP_ORIGIN: ORIGIN,
     MEDIA_DIR: mediaDir,
+    // Transcodage logiciel : résultat identique avec ou sans iGPU
+    VIDEO_HWACCEL: (process.env.VIDEO_HWACCEL as 'none' | 'vaapi' | undefined) ?? 'none',
+    HEIF_DEC_PATH: process.env.HEIF_DEC_PATH,
   });
   const database = await openDatabase(config.DATABASE_URL);
   const app = await buildApp({ config, database });
@@ -55,4 +58,39 @@ export function sessionCookie(response: LightMyRequestResponse) {
   const cookie = response.cookies.find((c) => c.name === 'pa_session');
   if (!cookie) throw new Error('pas de cookie de session');
   return `pa_session=${cookie.value}`;
+}
+
+/**
+ * Envoi tus complet (création + un seul PATCH). Passe par un vrai serveur HTTP (`app.listen`) :
+ * le serveur tus lit le flux réseau brut, que l'injection de requêtes de Fastify ne simule pas.
+ */
+export async function tusUpload(
+  base: string,
+  cookie: string,
+  mediaId: string,
+  body: Uint8Array,
+  filename = 'photo.jpg',
+) {
+  const b64 = (value: string) => Buffer.from(value).toString('base64');
+  const headers = { cookie, origin: ORIGIN, 'tus-resumable': '1.0.0' };
+  const created = await fetch(`${base}/api/v1/uploads`, {
+    method: 'POST',
+    headers: {
+      ...headers,
+      'upload-length': String(body.length),
+      'upload-metadata': `mediaId ${b64(mediaId)},filename ${b64(filename)}`,
+    },
+  });
+  if (created.status !== 201) return { statusCode: created.status };
+  const location = new URL(created.headers.get('location') ?? '', base).pathname;
+  const patched = await fetch(`${base}${location}`, {
+    method: 'PATCH',
+    headers: {
+      ...headers,
+      'upload-offset': '0',
+      'content-type': 'application/offset+octet-stream',
+    },
+    body: new Uint8Array(body),
+  });
+  return { statusCode: patched.status };
 }

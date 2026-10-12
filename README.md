@@ -7,7 +7,7 @@ Le réseau social privé de la bande : vos soirées, vos voyages et vos têtes, 
 - Notifications push, souvenirs « il y a 1 an »
 - PWA installable sur iOS et Android, auto-hébergée
 
-> 🚧 En développement — **M0**, **M1**, **M2** et **M3 · Social** ✅ en ligne sur [pictur.dylanbouillon.fr](https://pictur.dylanbouillon.fr), prochain jalon : **M4 · Vidéos & HEIC**. Réécriture complète du projet de cours Pictur'Art.
+> 🚧 En développement — **M0** à **M4 · Vidéos & HEIC** ✅ en ligne sur [pictur.dylanbouillon.fr](https://pictur.dylanbouillon.fr), prochain jalon : **M5 · PWA & notifications**. Réécriture complète du projet de cours Pictur'Art.
 
 ## Documentation
 
@@ -40,6 +40,8 @@ pnpm dev                                     # API sur :3000, PWA sur :5173
 ```
 
 Les tests de l'API tournent eux aussi sur PGlite, sans Docker.
+
+En local, les médias sont traités dans le processus de l'API (en production, par le conteneur `worker`). Les photos JPEG, PNG et WebP marchent tout de suite. Pour les vidéos et le HEIC, il faut `ffmpeg`/`ffprobe` et `heif-dec` (libheif) dans le `PATH`. Sans eux, ces fichiers finissent en échec et les tests correspondants sont sautés. Autre option : faire tourner l'API sur une machine équipée et y brancher la PWA avec `API_PROXY=http://<machine>:3000 pnpm --filter @picturart/web dev`.
 
 ## Premier compte en production
 

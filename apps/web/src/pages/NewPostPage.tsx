@@ -1,6 +1,11 @@
-import { ACCEPTED_IMAGE_TYPES, MAX_FILES_PER_POST } from '@picturart/shared';
+import {
+  ACCEPTED_MEDIA_TYPES,
+  type AcceptedMediaType,
+  MAX_FILES_PER_POST,
+  mediaTypeOf,
+} from '@picturart/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { Camera, ImagePlus, X } from 'lucide-react';
+import { Camera, ImagePlus, Play, X } from 'lucide-react';
 import {
   type ChangeEvent,
   type FormEvent,
@@ -13,7 +18,7 @@ import {
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import ui from '../components/ui.module.css';
 import { ApiError } from '../lib/api.ts';
-import { avatarColor } from '../lib/format.ts';
+import { avatarColor, mediaCountLabel } from '../lib/format.ts';
 import { keys, useCreatePost, useEvents } from '../lib/queries.ts';
 import { startUploads } from '../lib/uploads.ts';
 import np from './NewPostPage.module.css';
@@ -21,8 +26,12 @@ import styles from './pages.module.css';
 
 interface Picked {
   file: File;
+  type: AcceptedMediaType;
   preview: string;
 }
+
+/** Les extensions s'ajoutent aux types : le HEIC n'a pas de type MIME sous Windows et Android. */
+const ACCEPT = [...ACCEPTED_MEDIA_TYPES, '.heic', '.heif', '.mov'].join(',');
 
 export function NewPostPage() {
   const [params] = useSearchParams();
@@ -55,16 +64,12 @@ export function NewPostPage() {
 
   function onFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-    const accepted = files.filter((f) =>
-      (ACCEPTED_IMAGE_TYPES as readonly string[]).includes(f.type),
-    );
+    const accepted = files.flatMap((file) => {
+      const type = mediaTypeOf(file);
+      return type ? [{ file, type, preview: URL.createObjectURL(file) }] : [];
+    });
     setRejected(files.length - accepted.length);
-    setPicked((current) =>
-      [...current, ...accepted.map((file) => ({ file, preview: URL.createObjectURL(file) }))].slice(
-        0,
-        MAX_FILES_PER_POST,
-      ),
-    );
+    setPicked((current) => [...current, ...accepted].slice(0, MAX_FILES_PER_POST));
     event.target.value = '';
   }
 
@@ -82,11 +87,7 @@ export function NewPostPage() {
       {
         eventId: selectedEvent.id,
         caption,
-        files: files.map((f) => ({
-          name: f.name,
-          size: f.size,
-          type: f.type as (typeof ACCEPTED_IMAGE_TYPES)[number],
-        })),
+        files: picked.map((p) => ({ name: p.file.name, size: p.file.size, type: p.type })),
       },
       {
         onSuccess: (post) => {
@@ -103,6 +104,9 @@ export function NewPostPage() {
 
   const fieldErrors = create.error instanceof ApiError ? create.error.fields : {};
   const totalMb = picked.reduce((sum, p) => sum + p.file.size, 0) / 1024 / 1024;
+  const countLabel = mediaCountLabel(
+    picked.map((p) => (p.type.startsWith('video/') ? 'video' : 'photo')),
+  );
 
   if (events.data && postable.length === 0) {
     return (
@@ -135,7 +139,7 @@ export function NewPostPage() {
       <input
         ref={inputRef}
         type="file"
-        accept={ACCEPTED_IMAGE_TYPES.join(',')}
+        accept={ACCEPT}
         multiple
         onChange={onFiles}
         className={ui.visuallyHidden}
@@ -147,7 +151,7 @@ export function NewPostPage() {
         {picked.length === 0 ? (
           <button type="button" className={np.picker} onClick={() => inputRef.current?.click()}>
             <ImagePlus size={32} strokeWidth={1.6} aria-hidden="true" />
-            <span className={np.pickerTitle}>Choisir des photos</span>
+            <span className={np.pickerTitle}>Choisir des photos et vidéos</span>
             <span className={styles.lead} style={{ fontSize: 13 }}>
               En qualité originale · {MAX_FILES_PER_POST} maximum
             </span>
@@ -157,7 +161,7 @@ export function NewPostPage() {
             <ul className={np.grid}>
               {picked.map((p, index) => (
                 <li key={p.preview} className={np.thumb}>
-                  <img src={p.preview} alt="" className={np.img} />
+                  <Preview picked={p} />
                   <button
                     type="button"
                     className={np.remove}
@@ -174,7 +178,7 @@ export function NewPostPage() {
                     type="button"
                     className={np.add}
                     onClick={() => inputRef.current?.click()}
-                    aria-label="Ajouter des photos"
+                    aria-label="Ajouter des photos ou vidéos"
                   >
                     <ImagePlus size={22} strokeWidth={1.8} />
                   </button>
@@ -182,9 +186,7 @@ export function NewPostPage() {
               )}
             </ul>
             <div className={np.summary}>
-              <span>
-                {picked.length} {picked.length > 1 ? 'photos' : 'photo'}
-              </span>
+              <span>{countLabel}</span>
               <span className={ui.meta} style={{ letterSpacing: 1 }}>
                 Originaux · {totalMb < 1 ? '< 1' : Math.round(totalMb)} Mo
               </span>
@@ -194,8 +196,8 @@ export function NewPostPage() {
 
         {rejected > 0 && (
           <p className={ui.formError}>
-            {rejected} fichier{rejected > 1 ? 's' : ''} ignoré{rejected > 1 ? 's' : ''} : les vidéos
-            et certains formats arrivent bientôt.
+            {rejected} fichier{rejected > 1 ? 's' : ''} ignoré{rejected > 1 ? 's' : ''} : formats
+            acceptés JPEG, PNG, WebP, HEIC, MP4 et MOV.
           </p>
         )}
 
@@ -248,9 +250,40 @@ export function NewPostPage() {
           <Camera size={22} strokeWidth={1.8} aria-hidden="true" />
           {create.isPending
             ? 'Préparation…'
-            : `Développer${picked.length ? ` · ${picked.length} ${picked.length > 1 ? 'photos' : 'photo'}` : ''}`}
+            : `Développer${picked.length ? ` · ${countLabel}` : ''}`}
         </button>
       </form>
     </main>
+  );
+}
+
+/** Aperçu local : image, première image d'une vidéo, ou étiquette si le navigateur ne lit pas le HEIC. */
+function Preview({ picked }: { picked: Picked }) {
+  const [broken, setBroken] = useState(false);
+  if (picked.type.startsWith('video/')) {
+    return (
+      <>
+        {broken ? (
+          <span className={np.format}>Vidéo</span>
+        ) : (
+          <video
+            src={`${picked.preview}#t=0.1`}
+            className={np.img}
+            muted
+            playsInline
+            preload="metadata"
+            onError={() => setBroken(true)}
+          />
+        )}
+        <span className={np.play} aria-hidden="true">
+          <Play size={12} fill="currentColor" strokeWidth={0} />
+        </span>
+      </>
+    );
+  }
+  return broken ? (
+    <span className={np.format}>{picked.type === 'image/heic' ? 'HEIC' : 'Photo'}</span>
+  ) : (
+    <img src={picked.preview} alt="" className={np.img} onError={() => setBroken(true)} />
   );
 }

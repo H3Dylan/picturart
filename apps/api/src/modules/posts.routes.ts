@@ -153,10 +153,11 @@ export async function loadPosts(db: Db, postIds: string[], userId: string): Prom
     const list = mediaBy.get(m.postId) ?? [];
     list.push({
       id: m.id,
-      kind: 'photo',
+      kind: m.kind,
       status: m.status,
       width: m.width,
       height: m.height,
+      durationMs: m.durationMs,
       takenAt: m.takenAt?.toISOString() ?? null,
       position: m.position,
       reactions: mediaReactionsBy.get(m.id) ?? noReactions(),
@@ -251,6 +252,8 @@ export function postsRoutes(app: FastifyInstance, db: Db, hub: RealtimeHub) {
           postId: post.id,
           uploaderId: user.id,
           position,
+          // Type annoncé, confirmé par les premiers octets à la fin de l'envoi
+          kind: file.type.startsWith('video/') ? ('video' as const) : ('photo' as const),
           originalName: file.name,
           declaredMime: file.type,
           declaredSize: file.size,

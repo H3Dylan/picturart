@@ -43,7 +43,7 @@ export function mediaRoutes(app: FastifyInstance, db: Db) {
         .where(
           and(
             eq(mediaVariants.mediaId, id),
-            eq(mediaVariants.variant, variant as 'thumb' | 'display'),
+            eq(mediaVariants.variant, variant as 'thumb' | 'display' | 'video'),
           ),
         )
         .limit(1);

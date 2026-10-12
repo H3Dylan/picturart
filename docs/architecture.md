@@ -16,7 +16,7 @@ flowchart LR
     T["Traefik + CrowdSec<br/>(CT 102)"]
     subgraph CT107["CT 107 · picturart"]
       API["API Fastify<br/>REST · tus · WebSocket"]
-      W["Worker<br/>(jobs pg-boss)"]
+      W["Worker<br/>(ffmpeg · libheif · QuickSync)"]
       DB[("PostgreSQL")]
       FS[("Médias<br/>dataset ZFS")]
     end
@@ -35,9 +35,11 @@ flowchart LR
 - **Un seul serveur**, un seul conteneur LXC (CT 107) avec Docker Compose : API, worker, PostgreSQL.
 - **L'API** gère l'authentification, les données, l'envoi des fichiers et le temps réel.
 - **Le worker** fait le travail lourd en arrière-plan : vignettes, vidéos, notifications push, purge de la corbeille, souvenirs.
-- Les deux partagent le même code (monorepo) et communiquent par la base (file de jobs + `LISTEN/NOTIFY`).
+- Les deux partagent le même code (monorepo, même Dockerfile, deux cibles `api` et `worker`) et communiquent par la base (`LISTEN/NOTIFY`).
 
-> **Décision M2** : pour les photos, le traitement (vignettes, ~250 ms par photo 4K) tourne dans une file en mémoire **à l'intérieur de l'API**, reprise automatiquement au redémarrage. C'est suffisant pour une dizaine de personnes et évite un service de plus. Le worker séparé arrivera avec les vidéos (M4), dont le transcodage est beaucoup plus lourd.
+> **Décision M2** : pour les photos, le traitement tournait dans une file en mémoire à l'intérieur de l'API.
+>
+> **Décision M4** : avec les vidéos, le traitement passe dans un **conteneur `worker` séparé** (seul à embarquer ffmpeg, libheif et le pilote Intel, seul à accéder à l'iGPU, limité à 4 cœurs). **La file, c'est la table `media` elle-même** : un média `processing` non réservé est pris avec `SELECT … FOR UPDATE SKIP LOCKED`, l'API réveille le worker par `NOTIFY media_jobs`, le worker répond par `NOTIFY media_done` et l'API prévient les membres par WebSocket. Pas de pg-boss : une table et deux canaux suffisent pour une dizaine de personnes. Deux voies indépendantes (2 photos et 1 vidéo en parallèle) : une vidéo 4K ne bloque pas les photos. Un média qui fait tomber le worker 3 fois passe en échec. En développement et dans les tests, le même worker tourne dans le processus de l'API (`WORKER_INLINE`).
 
 Ce découpage suffit largement pour une dizaine d'utilisateurs, tout en restant propre : rien n'empêche plus tard de séparer les services.
 
@@ -61,10 +63,10 @@ Ce découpage suffit largement pour une dizaine d'utilisateurs, tout en restant 
 | Validation | **Zod** (schémas dans `packages/shared`) | Mêmes règles côté client et serveur |
 | Base | **PostgreSQL 17** | Relationnel, JSONB pour les notifications |
 | ORM / migrations | **Drizzle ORM + drizzle-kit** | Requêtes SQL typées, migrations versionnées |
-| Jobs | **pg-boss** | File de jobs dans PostgreSQL : pas de Redis à maintenir |
-| Images | **sharp** (libvips) | Vignettes WebP rapides ; HEIC via libvips + libheif (voir §5) |
+| Jobs | **PostgreSQL** (`SKIP LOCKED` + `LISTEN/NOTIFY`) | La table `media` sert de file : ni Redis ni pg-boss à maintenir |
+| Images | **sharp** (libvips) + **libheif** (`heif-dec`) | Vignettes WebP rapides ; HEIC d'iPhone décodé par libheif (voir §5) |
 | Métadonnées | **exifr** | Date de prise de vue, orientation, GPS |
-| Vidéos | **ffmpeg** + Intel QuickSync | Transcodage matériel sur l'iGPU de l'Optiplex |
+| Vidéos | **ffmpeg 8** + Intel QuickSync (VA-API) | Décodage et encodage matériels sur l'iGPU de l'Optiplex |
 | Mots de passe | **Argon2id** (`@node-rs/argon2`) | Recommandation OWASP |
 | Push | **web-push** (VAPID) | Standard Web Push, sans service tiers |
 | Tests | **Vitest** (unitaires + API), **Playwright** (bout en bout) | |
@@ -89,7 +91,7 @@ picturart/
 │       ├── src/
 │       │   ├── modules/     # auth, events, posts, media, reactions, comments…
 │       │   ├── db/          # schéma Drizzle + migrations
-│       │   ├── jobs/        # traitements pg-boss
+│       │   ├── media/       # envoi tus, worker, photos, HEIC, vidéos
 │       │   ├── server.ts    # point d'entrée API
 │       │   └── worker.ts    # point d'entrée worker
 │       └── test/
@@ -159,11 +161,12 @@ sequenceDiagram
     P->>A: PATCH /uploads/:id (tus)
     A->>D: écrit l'original
   end
-  A->>W: job « traiter le média »
-  W->>D: lit l'original
-  W->>W: sha256, EXIF, dimensions
-  W->>D: vignette + version d'affichage (photo)<br/>ou version 1080p + poster (vidéo)
-  W->>A: NOTIFY média prêt
+  A->>A: vrai format (premiers octets), sha256
+  A->>W: NOTIFY media_jobs
+  W->>D: lit l'original (réservé avec SKIP LOCKED)
+  W->>W: EXIF, dimensions, durée
+  W->>D: vignette + version d'affichage (photo)<br/>ou version 1080p + aperçu (vidéo)
+  W->>A: NOTIFY media_done
   A-->>P: WebSocket « média prêt »
   W->>W: notification push regroupée (après 2 min de calme)
 ```
@@ -171,18 +174,23 @@ sequenceDiagram
 ### Photos
 - **Original** stocké tel quel (JPEG, HEIC, PNG…), jamais modifié.
 - **Vignette** 400 px et **affichage** 2048 px en WebP, rotation EXIF appliquée, **GPS retiré**.
-- **HEIC** (iPhone) : les binaires standards de sharp ne lisent pas le HEIC. Piste retenue : sharp lié au **libvips système de Debian, compilé avec libheif + libde265**. À valider en premier (voir §10).
+- **HEIC** (iPhone) : les binaires de sharp ne décodent pas le HEVC (brevets). Le worker passe par **`heif-dec` de libheif 1.23** (Alpine) : rotation `irot` appliquée, orientation EXIF remise à « normale », profil couleur et date conservés, puis sharp comme pour un JPEG. La date est relue dans le JPEG décodé quand exifr ne sait pas lire l'EXIF du HEIC.
+- Le format réel est reconnu à ses **premiers octets** (JPEG, PNG, WebP, boîte `ftyp` des HEIC/MP4/MOV), jamais à l'extension ; le décodage complet dans le worker rejette les fichiers corrompus.
 
 ### Vidéos
 - **Original** conservé (jusqu'à 4K60, HEVC, HDR).
-- **Version de lecture** 1080p H.264 + **poster** JPEG, via ffmpeg avec **QuickSync** (`h264_qsv`).
-- Vidéos iPhone **HDR** : conversion des couleurs vers SDR (tonemapping) pour éviter un rendu délavé. À valider sur de vrais fichiers.
+- **Version de lecture** MP4 H.264 (côté court 1080 px, 60 i/s max, AAC stéréo, `faststart`, **sans métadonnées** donc sans position GPS) + **aperçu** et vignette WebP tirés de cette version.
+- **QuickSync via VA-API** (`intel-media-driver`) : décodage HEVC 10 bits et réduction sur l'iGPU, puis couleurs et rotation sur le CPU (en 1080p, c'est léger), encodage `h264_vaapi` sur l'iGPU. Si l'iGPU refuse un fichier, repli automatique en logiciel (`libx264`).
+- Vidéos iPhone **HDR** (HLG) : `tonemap_vaapi` n'accepte que le HDR10 avec métadonnées, donc tonemapping `zscale` + `tonemap=hable` sur le CPU, vers le SDR BT.709.
+- **Rotation** : les iPhone filment « couché » avec une matrice d'affichage ; elle est appliquée (`transpose`) et vérifiée contre la rotation automatique de ffmpeg.
+- Mesures sur l'i5-8500T : 4K HDR portrait de 6 s → 1080×1920 en ~7 s (≈ temps réel) ; environ 3 fois plus de CPU sans l'iGPU.
 
 ### Stockage
 ```
 /data/media/
 ├── originals/2026/10/<uuid>.<ext>
-├── derived/<uuid>/thumb.webp | display.webp | video.mp4 | poster.jpg
+├── derived/<uuid>/thumb.webp | display.webp | video.mp4
+├── tmp/<uuid>/         # fichiers intermédiaires du worker
 └── uploads/            # morceaux tus en cours
 ```
 - Dataset ZFS dédié `rpool/picturart`, monté dans le CT, avec **quota**.
@@ -250,14 +258,14 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 |---|---|
 | Conteneur | **CT 107 `picturart`** (ancien emplacement d'Immich, supprimé), Debian 13, 4 cœurs, 4 Go RAM, IP `192.168.1.107` |
 | Médias | Dataset ZFS **`rpool/picturart`**, quota **500 Go** |
-| GPU | `/dev/dri/renderD128` partagé avec le CT (QuickSync) |
+| GPU | `/dev/dri/renderD128` partagé avec le CT (`dev0 … gid=992`, groupe `render`), puis avec le conteneur `worker` (`group_add`) |
 | Domaine | **`pictur.dylanbouillon.fr`** — route Traefik + CrowdSec, sur le modèle de `portfolio.yml` |
 | Services | `docker compose` : `api`, `worker`, `postgres` |
 | Sauvegardes | `pg_dump` quotidien dans le dataset + snapshots ZFS (sanoid) + sauvegarde Proxmox du CT ; **copie hors site toujours à mettre en place** |
 
 ### Chaîne CI/CD
 1. **Pull request / push** → GitHub Actions : lint, vérification des types, tests (avec un PostgreSQL de test), build.
-2. **Merge sur `main`** → construction des images Docker `api` et `web`, publication sur GHCR (privé).
+2. **Merge sur `main`** → construction des images Docker `api`, `worker` et `web`, publication sur GHCR (privé). Les tests de la CI installent ffmpeg et libheif pour couvrir vidéos et HEIC.
 3. **Déploiement** : un **runner GitHub auto-hébergé dans le CT 107** récupère les nouvelles images et relance `docker compose`. Il ne fait que des connexions sortantes : aucun port à ouvrir sur le serveur.
 4. Migrations de base appliquées automatiquement au démarrage de l'API.
 
@@ -276,7 +284,7 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 | ✅ **M1 · Comptes** | Invitations, inscription, connexion, profil, thème clair/sombre | La bande peut créer son compte |
 | ✅ **M2 · Événements & photos** | Événements, membres, rôles, création de post, envoi tus, vignettes | On peut poster des photos |
 | ✅ **M3 · Social** | Fil, page événement (planche), visionneuse, réactions, commentaires, temps réel | L'expérience de base est complète |
-| **M4 · Vidéos & HEIC** | Transcodage QuickSync, HDR, HEIC | Les médias iPhone passent sans souci |
+| ✅ **M4 · Vidéos & HEIC** | Transcodage QuickSync, HDR, HEIC | Les médias iPhone passent sans souci |
 | **M5 · PWA & notifs** | Installation, push regroupées, écran Activité | On est prévenu quand la bande poste |
 | **M6 · Fun** | Réactions perso, souvenirs « il y a 1 an », stats de profil | La personnalité de l'app |
 | **Bêta** | Ouverture à la bande, retours, corrections | v1.0 |
@@ -287,7 +295,7 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 
 Ce sont les risques techniques ; mieux vaut les lever tôt, avant de construire dessus :
 
-1. **HEIC** : sharp + libvips de Debian 13 décode-t-il les photos d'iPhone ? Sinon, plan B : conversion via `heif-convert` ou ffmpeg.
-2. **Vidéo HDR iPhone + QuickSync** : rendu des couleurs après conversion, vitesse sur l'i5-8500T.
+1. ✅ **HEIC** : décodé par `heif-dec` (libheif 1.23, Alpine), rotation et date vérifiées (M4).
+2. ✅ **Vidéo HDR + QuickSync** : chaîne hybride iGPU/CPU validée sur l'i5-8500T (M4). Reste à confirmer le rendu sur de vraies vidéos d'iPhone.
 3. **Envoi depuis iOS Safari** : comportement de tus quand on verrouille le téléphone, reprise à la réouverture.
 4. **Push sur iOS** : fonctionnement réel une fois la PWA installée sur l'écran d'accueil.

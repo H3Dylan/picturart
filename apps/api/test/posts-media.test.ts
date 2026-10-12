@@ -8,9 +8,7 @@ import type {
 import exifr from 'exifr';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestApp, ORIGIN, sessionCookie } from './helpers.ts';
-
-const b64 = (value: string) => Buffer.from(value).toString('base64');
+import { createTestApp, ORIGIN, sessionCookie, tusUpload } from './helpers.ts';
 
 /** Photo de test 3000×2000 avec date de prise de vue et coordonnées GPS. */
 async function testPhoto() {
@@ -38,33 +36,9 @@ describe('posts, envoi tus et médias', () => {
       ...(payload !== undefined && { payload: payload as object }),
     });
 
-  // L'envoi tus passe par un vrai serveur HTTP local : le serveur tus lit le flux réseau brut,
-  // que l'injection de requêtes de Fastify ne simule pas.
   let base: string;
-
-  async function upload(who: string, mediaId: string, body: Buffer) {
-    const headers = { cookie: cookies[who] ?? '', origin: ORIGIN, 'tus-resumable': '1.0.0' };
-    const created = await fetch(`${base}/api/v1/uploads`, {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'upload-length': String(body.length),
-        'upload-metadata': `mediaId ${b64(mediaId)},filename ${b64('photo.jpg')}`,
-      },
-    });
-    if (created.status !== 201) return { statusCode: created.status };
-    const location = new URL(created.headers.get('location') ?? '', base).pathname;
-    const patched = await fetch(`${base}${location}`, {
-      method: 'PATCH',
-      headers: {
-        ...headers,
-        'upload-offset': '0',
-        'content-type': 'application/offset+octet-stream',
-      },
-      body: new Uint8Array(body),
-    });
-    return { statusCode: patched.status };
-  }
+  const upload = (who: string, mediaId: string, body: Buffer) =>
+    tusUpload(base, cookies[who] ?? '', mediaId, body);
 
   async function createPost(who: string, files: { name: string; size: number; type: string }[]) {
     return inject(who, 'POST', '/api/v1/posts', { eventId: event.id, caption: 'La plage', files });
@@ -136,7 +110,7 @@ describe('posts, envoi tus et médias', () => {
   it('envoie la photo (tus), puis génère vignette et version d’affichage', async () => {
     const response = await upload('lea', post.media[0]?.id ?? '', photo);
     expect(response.statusCode).toBe(204);
-    await t.app.mediaQueue.drained();
+    await t.app.mediaWorker?.idle();
 
     const page: PostsPage = (
       await inject('dylan', 'GET', `/api/v1/events/${event.id}/posts`)

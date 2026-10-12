@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { MediaKind } from './posts.ts';
 
 /** Réactions disponibles (les réactions perso de la bande arrivent au jalon M6). */
 export const REACTION_EMOJIS = ['❤️', '😂', '🔥', '😍', '😮', '👏'] as const;
@@ -34,8 +35,10 @@ export interface PlancheItem {
   mediaId: string;
   postId: string;
   author: { id: string; displayName: string };
+  kind: MediaKind;
   width: number | null;
   height: number | null;
+  durationMs: number | null;
   takenAt: string | null;
   reactionCount: number;
 }

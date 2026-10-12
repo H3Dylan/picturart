@@ -5,17 +5,15 @@ import { FileStore } from '@tus/file-store';
 import { Server } from '@tus/server';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import sharp from 'sharp';
 import { requireUser } from '../auth/plugin.ts';
 import type { Db } from '../db/client.ts';
 import { media } from '../db/schema.ts';
 import { HttpError, notFound } from '../lib/errors.ts';
 import { isUuid } from '../modules/access.ts';
-import type { MediaQueue } from './queue.ts';
+import { detectFileFormat } from './sniff.ts';
 import { type MediaStorage, sha256File } from './storage.ts';
 
 const UPLOADS_PATH = '/api/v1/uploads';
-const EXTENSIONS: Record<string, string> = { jpeg: 'jpg', png: 'png', webp: 'webp' };
 
 /** Lit l'en-tête tus « Upload-Metadata » : `clé base64,clé base64`. */
 export function parseUploadMetadata(header: string | undefined) {
@@ -29,28 +27,35 @@ export function parseUploadMetadata(header: string | undefined) {
 
 /**
  * Envoi terminé : vérification du vrai format, empreinte, rangement de l'original,
- * puis mise en file pour générer les vignettes.
+ * puis signal au worker (vignettes, version de lecture des vidéos).
  */
 export async function finalizeUpload(
   db: Db,
   storage: MediaStorage,
-  queue: MediaQueue,
+  onQueued: () => Promise<void>,
   mediaId: string,
 ) {
   const uploaded = join(storage.uploadsDir, mediaId);
   try {
-    const { format } = await sharp(uploaded).metadata();
-    const extension = format ? EXTENSIONS[format] : undefined;
-    if (!extension) throw new Error(`format non pris en charge : ${format ?? 'inconnu'}`);
+    const format = await detectFileFormat(uploaded);
+    if (!format) throw new Error('format non pris en charge');
 
     const sha = await sha256File(uploaded);
-    const originalPath = storage.originalPath(mediaId, extension);
+    const originalPath = storage.originalPath(mediaId, format.extension);
     await storage.move(uploaded, originalPath);
     await db
       .update(media)
-      .set({ status: 'processing', originalPath, sha256: sha, mime: `image/${format}` })
+      .set({
+        status: 'processing',
+        kind: format.kind,
+        originalPath,
+        sha256: sha,
+        mime: format.mime,
+        attempts: 0,
+        processingStartedAt: null,
+      })
       .where(eq(media.id, mediaId));
-    queue.enqueue(mediaId);
+    await onQueued();
   } catch (error) {
     await db
       .update(media)
@@ -66,7 +71,7 @@ export function registerUploads(
   app: FastifyInstance,
   db: Db,
   storage: MediaStorage,
-  queue: MediaQueue,
+  onQueued: () => Promise<void>,
 ) {
   const tus = new Server({
     path: UPLOADS_PATH,
@@ -78,7 +83,7 @@ export function registerUploads(
     // L'identifiant de l'envoi est celui du média, déjà vérifié avant d'arriver ici
     namingFunction: (_req, metadata) => metadata?.mediaId ?? '',
     onUploadFinish: async (_req, upload) => {
-      await finalizeUpload(db, storage, queue, upload.id);
+      await finalizeUpload(db, storage, onQueued, upload.id);
       return {};
     },
   });

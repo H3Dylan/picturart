@@ -1,4 +1,4 @@
-import { mediaUrl, type ReactionEmoji } from '@picturart/shared';
+import { type MediaKind, mediaUrl, type ReactionEmoji } from '@picturart/shared';
 import { ChevronLeft, ChevronRight, Download, MessageCircle, X } from 'lucide-react';
 import { type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -13,6 +13,7 @@ import v from './ViewerPage.module.css';
 interface Item {
   mediaId: string;
   postId: string;
+  kind: MediaKind;
 }
 
 /** Visionneuse d'un post : /posts/:postId/photos/:index */
@@ -23,7 +24,7 @@ export function PostViewerPage() {
     () =>
       (post.data?.media ?? [])
         .filter((m) => m.status === 'ready')
-        .map((m) => ({ mediaId: m.id, postId })),
+        .map((m) => ({ mediaId: m.id, postId, kind: m.kind })),
     [post.data, postId],
   );
   return (
@@ -43,7 +44,7 @@ export function PlancheViewerPage() {
   const best = params.get('tri') === 'meilleures';
   const planche = usePlanche(eventId, best);
   const items = useMemo<Item[]>(
-    () => (planche.data ?? []).map((p) => ({ mediaId: p.mediaId, postId: p.postId })),
+    () => (planche.data ?? []).map((p) => ({ mediaId: p.mediaId, postId: p.postId, kind: p.kind })),
     [planche.data],
   );
   return (
@@ -66,6 +67,7 @@ interface ViewerProps {
 function Viewer({ items, index, loading, hrefFor }: ViewerProps) {
   const navigate = useNavigate();
   const current = items[index];
+  const video = current?.kind === 'video';
   const post = usePost(current?.postId);
   const media = post.data?.media.find((m) => m.id === current?.mediaId);
   const [heart, setHeart] = useState(0);
@@ -99,6 +101,8 @@ function Viewer({ items, index, loading, hrefFor }: ViewerProps) {
   // Clavier : flèches et Échap
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // Sur le lecteur vidéo, les flèches avancent dans la vidéo
+      if (event.target instanceof HTMLVideoElement && event.key !== 'Escape') return;
       if (event.key === 'ArrowRight') go(index + 1);
       else if (event.key === 'ArrowLeft') go(index - 1);
       else if (event.key === 'Escape') close();
@@ -130,6 +134,14 @@ function Viewer({ items, index, loading, hrefFor }: ViewerProps) {
   // Glisser pour changer de photo
   const start = useRef<number | null>(null);
   const onPointerDown = (event: PointerEvent) => {
+    // Vidéo : le bas de l'image appartient aux commandes du lecteur (barre de lecture)
+    if (event.target instanceof HTMLVideoElement) {
+      const rect = event.target.getBoundingClientRect();
+      if (event.clientY > rect.top + rect.height * 0.7) {
+        start.current = null;
+        return;
+      }
+    }
     start.current = event.clientX;
   };
   const onPointerUp = (event: PointerEvent) => {
@@ -138,7 +150,8 @@ function Viewer({ items, index, loading, hrefFor }: ViewerProps) {
     const dx = event.clientX - start.current;
     start.current = null;
     if (Math.abs(dx) > 60) go(index + (dx < 0 ? 1 : -1));
-    else tap();
+    // Sur une vidéo, un appui sert au lecteur (lecture, pause)
+    else if (!video) tap();
   };
 
   return (
@@ -170,9 +183,24 @@ function Viewer({ items, index, loading, hrefFor }: ViewerProps) {
         className={v.stage}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
-        aria-label="Photo : glisse pour changer, double appui pour ❤️"
+        aria-label={
+          video ? 'Vidéo : glisse pour changer' : 'Photo : glisse pour changer, double appui pour ❤️'
+        }
       >
-        {current && (
+        {current && video && (
+          // Version de lecture 1080p (H.264, SDR) : lisible partout, l'original reste téléchargeable.
+          // biome-ignore lint/a11y/useMediaCaption: vidéos perso de la bande, sans piste de sous-titres
+          <video
+            key={current.mediaId}
+            src={mediaUrl(current.mediaId, 'video')}
+            poster={mediaUrl(current.mediaId, 'display')}
+            className={v.photo}
+            controls
+            playsInline
+            preload="metadata"
+          />
+        )}
+        {current && !video && (
           <img
             key={current.mediaId}
             src={mediaUrl(current.mediaId, 'display')}

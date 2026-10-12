@@ -7,7 +7,8 @@ import { dirname, join, posix, resolve } from 'node:path';
  * Arborescence des médias :
  *   uploads/                     envois tus en cours
  *   originals/AAAA/MM/<id>.<ext> originaux, jamais modifiés
- *   derived/<id>/<variante>.webp vignettes et versions d'affichage
+ *   derived/<id>/<variante>.webp vignettes et versions d'affichage (video.mp4 pour les vidéos)
+ *   tmp/<id>/                    fichiers intermédiaires du worker
  */
 export class MediaStorage {
   readonly root: string;
@@ -31,8 +32,15 @@ export class MediaStorage {
     return posix.join('originals', String(date.getUTCFullYear()), month, `${mediaId}.${extension}`);
   }
 
-  derivedPath(mediaId: string, variant: string) {
-    return posix.join('derived', mediaId, `${variant}.webp`);
+  derivedPath(mediaId: string, variant: string, extension = 'webp') {
+    return posix.join('derived', mediaId, `${variant}.${extension}`);
+  }
+
+  /** Dossier de travail temporaire d'un média (absolu), créé à la demande. */
+  async workDir(mediaId: string) {
+    const dir = join(this.root, 'tmp', mediaId);
+    await mkdir(dir, { recursive: true });
+    return dir;
   }
 
   async move(fromAbs: string, toRelative: string) {

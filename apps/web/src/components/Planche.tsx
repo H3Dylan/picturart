@@ -1,6 +1,7 @@
 import { mediaUrl, type PlancheItem } from '@picturart/shared';
 import { Link } from 'react-router';
 import styles from './Planche.module.css';
+import { VideoBadge } from './VideoBadge.tsx';
 
 /** Numéro de pose façon pellicule : 01, 01A, 02, 02A… */
 export function frameNumber(index: number) {
@@ -31,7 +32,7 @@ export function Planche({ items, eventId, best = false }: PlancheProps) {
               <Link
                 to={`/evenements/${eventId}/photos/${index}${best ? '?tri=meilleures' : ''}`}
                 className={`${styles.frame} ${star ? styles.star : ''}`}
-                aria-label={`Photo ${index + 1} de ${item.author.displayName}${item.reactionCount ? `, ${item.reactionCount} réactions` : ''}`}
+                aria-label={`${item.kind === 'video' ? 'Vidéo' : 'Photo'} ${index + 1} de ${item.author.displayName}${item.reactionCount ? `, ${item.reactionCount} réactions` : ''}`}
               >
                 <img
                   src={mediaUrl(item.mediaId, 'thumb')}
@@ -40,6 +41,7 @@ export function Planche({ items, eventId, best = false }: PlancheProps) {
                   decoding="async"
                   className={styles.img}
                 />
+                {item.kind === 'video' && <VideoBadge durationMs={item.durationMs} />}
               </Link>
               <span className={styles.number}>
                 {frameNumber(index)}

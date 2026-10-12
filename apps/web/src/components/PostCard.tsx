@@ -2,7 +2,7 @@ import { type MediaDto, mediaUrl, type PostDto, type ReactionEmoji } from '@pict
 import { MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { timeAgo } from '../lib/format.ts';
+import { mediaCountLabel, timeAgo } from '../lib/format.ts';
 import { useReact } from '../lib/queries.ts';
 import { useUploads } from '../lib/uploads.ts';
 import { useDoubleTap } from '../lib/useDoubleTap.ts';
@@ -10,6 +10,7 @@ import { Avatar } from './Avatar.tsx';
 import styles from './PostCard.module.css';
 import { applyReaction, ReactionBar } from './ReactionBar.tsx';
 import ui from './ui.module.css';
+import { VideoBadge } from './VideoBadge.tsx';
 
 interface PostCardProps {
   post: PostDto;
@@ -27,6 +28,7 @@ export function PostCard({ post, isAuthor, onDelete, deleting, showEvent = false
   const react = useReact({ kind: 'post', id: post.id, postId: post.id, eventId: post.eventId });
   const count = post.media.length;
   const shown = post.media.slice(0, 3);
+  const ready = post.media.filter((m) => m.status === 'ready');
   const layout = count >= 3 ? styles.grid3 : count === 2 ? styles.grid2 : styles.grid1;
 
   // Les données du serveur font foi dès qu'elles changent
@@ -54,7 +56,7 @@ export function PostCard({ post, isAuthor, onDelete, deleting, showEvent = false
           <div className={styles.name}>
             {post.author.displayName}{' '}
             <span className={styles.muted}>
-              a posté {count} {count > 1 ? 'photos' : 'photo'}
+              a posté {mediaCountLabel(post.media.map((m) => m.kind))}
             </span>
           </div>
           <div className={styles.muted}>
@@ -98,7 +100,8 @@ export function PostCard({ post, isAuthor, onDelete, deleting, showEvent = false
               key={media.id}
               media={media}
               postId={post.id}
-              index={index}
+              // La visionneuse ne parcourt que les médias prêts
+              index={ready.indexOf(media)}
               large={index === 0}
               more={index === 2 && count > 3 ? count - 3 : 0}
               onDoubleTap={like}
@@ -156,6 +159,7 @@ function MediaTile({ media, postId, index, large, more, onDoubleTap }: MediaTile
   const uploads = useUploads();
   const upload = uploads.get(media.id);
   const ready = media.status === 'ready';
+  const video = media.kind === 'video';
   const tap = useDoubleTap(() => navigate(`/posts/${postId}/photos/${index}`), onDoubleTap);
 
   let overlay: string | null = null;
@@ -172,7 +176,11 @@ function MediaTile({ media, postId, index, large, more, onDoubleTap }: MediaTile
       onClick={ready ? tap : undefined}
       disabled={!ready}
       className={`${styles.tile} ${large ? styles.large : ''}`}
-      aria-label={ready ? `Ouvrir la photo ${index + 1} (double appui : ❤️)` : (overlay ?? '')}
+      aria-label={
+        ready
+          ? `Ouvrir ${video ? 'la vidéo' : 'la photo'} ${index + 1} (double appui : ❤️)`
+          : (overlay ?? '')
+      }
     >
       {ready && (
         <img
@@ -184,6 +192,7 @@ function MediaTile({ media, postId, index, large, more, onDoubleTap }: MediaTile
           draggable={false}
         />
       )}
+      {ready && video && more === 0 && <VideoBadge durationMs={media.durationMs} />}
       {overlay && <span className={styles.overlay}>{overlay}</span>}
       {upload?.status === 'uploading' && (
         <span className={styles.progress} style={{ width: `${upload.progress * 100}%` }} />
