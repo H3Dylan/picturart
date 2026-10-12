@@ -1,15 +1,10 @@
 import { buildApp } from './app.ts';
 import { loadConfig } from './config.ts';
-import { createDatabase } from './db/client.ts';
+import { openDatabase } from './db/client.ts';
 
 const config = loadConfig();
-const database = createDatabase(config.DATABASE_URL);
-
-const app = buildApp({
-  version: config.APP_VERSION,
-  pingDatabase: database.ping,
-  logger: true,
-});
+const database = await openDatabase(config.DATABASE_URL);
+const app = await buildApp({ config, database, logger: true });
 
 async function shutdown(signal: string) {
   app.log.info(`${signal} reçu, arrêt en cours`);

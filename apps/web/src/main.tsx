@@ -6,15 +6,26 @@ import '@fontsource/space-mono/latin-700.css';
 import '../../../design/tokens.css';
 import './global.css';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './App.tsx';
+import { RouterProvider } from 'react-router';
+import { applyTheme, storedTheme } from './lib/theme.ts';
+import { router } from './router.tsx';
+
+applyTheme(storedTheme());
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
+});
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root introuvable');
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   </StrictMode>,
 );

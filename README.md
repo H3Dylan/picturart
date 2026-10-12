@@ -7,7 +7,7 @@ Le réseau social privé de la bande : vos soirées, vos voyages et vos têtes, 
 - Notifications push, souvenirs « il y a 1 an »
 - PWA installable sur iOS et Android, auto-hébergée
 
-> 🚧 En développement — **M0 · Fondations** ✅ en ligne sur [pictur.dylanbouillon.fr](https://pictur.dylanbouillon.fr), prochain jalon : **M1 · Comptes**. Réécriture complète du projet de cours Pictur'Art.
+> 🚧 En développement — **M0 · Fondations** et **M1 · Comptes** ✅ en ligne sur [pictur.dylanbouillon.fr](https://pictur.dylanbouillon.fr), prochain jalon : **M2 · Événements & photos**. Réécriture complète du projet de cours Pictur'Art.
 
 ## Documentation
 
@@ -30,14 +30,26 @@ infra/           Docker Compose, Traefik, scripts serveur
 
 ## Développer en local
 
-Prérequis : Node 24, Docker. pnpm est fourni par Corepack (`corepack enable`).
+Prérequis : Node 24. pnpm est fourni par Corepack (`corepack enable`). Docker est facultatif : par défaut, l'API utilise PostgreSQL embarqué (PGlite).
 
 ```bash
 pnpm install
-pnpm db:up                                   # PostgreSQL dans Docker
 cp apps/api/.env.example apps/api/.env
+pnpm --filter @picturart/api seed:dev        # compte et événement de démo (identifiants dans .env)
 pnpm dev                                     # API sur :3000, PWA sur :5173
 ```
+
+Les tests de l'API tournent eux aussi sur PGlite, sans Docker.
+
+## Premier compte en production
+
+Les inscriptions passent uniquement par des liens d'invitation. Le tout premier compte (admin) et son premier événement se créent sur le serveur, en ligne de commande. Le mot de passe est demandé de façon masquée :
+
+```bash
+docker compose -f /srv/picturart/compose.yml exec -it api node src/cli/create-event.ts
+```
+
+Le script affiche ensuite un lien d'invitation à partager avec la bande.
 
 | Commande | Rôle |
 |---|---|
