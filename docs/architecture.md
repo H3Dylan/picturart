@@ -135,7 +135,7 @@ erDiagram
 | `posts` | `id`, `event_id`, `author_id`, `caption`, `created_at`, `updated_at`, `deleted_at` | `deleted_at` = corbeille 30 jours |
 | `media` | `id`, `post_id`, `uploader_id`, `kind` (`photo`/`video`), `status` (`uploading`/`processing`/`ready`/`failed`), `position`, `original_path`, `mime`, `size_bytes`, `sha256`, `width`, `height`, `duration_ms`, `taken_at`, `deleted_at` | `taken_at` (EXIF) trie la planche contact |
 | `media_variants` | `media_id`, `variant` (`thumb`/`display`/`video`/`poster`), `path`, `width`, `height`, `size_bytes` | |
-| `post_reactions` / `media_reactions` | `post_id` *ou* `media_id`, `user_id`, `emoji` (emoji ou `custom:<id>`), `created_at` | Plusieurs réactions par personne (6 au plus), chaque emoji une fois — demandé pendant la bêta |
+| `post_reactions` / `media_reactions` | `post_id` *ou* `media_id`, `user_id`, `emoji` (emoji ou `custom:<id>`), `created_at` | Plusieurs réactions par personne (6 au plus), chaque emoji une fois ; n’importe quel emoji Unicode officiel (`p{RGI_Emoji}`), mis sous forme officielle (👍️ → 👍) pour qu’un emoji donne toujours la même pastille — demandé pendant la bêta. Sélecteur complet `emoji-picker-element`, chargé à la demande, données françaises servies par notre nginx |
 | `custom_reactions` | `id`, `name`, `image_path`, `created_by`, `source_media_id`, `created_at` | « Tom choqué » ; utilisée via la clé `custom:<id>` dans `post_reactions` / `media_reactions` |
 | `comments` | `id`, `post_id`, `author_id`, `body`, `created_at`, `edited_at`, `deleted_at` | |
 | `notifications` | `id`, `user_id`, `type`, `payload` (JSONB), `read_at`, `created_at` | Alimente l'écran Activité |

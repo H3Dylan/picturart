@@ -158,7 +158,7 @@ Priorisation MoSCoW : **M** = indispensable au MVP, **S** = juste après le MVP,
 ### Social
 | ID | Fonctionnalité | Prio |
 |---|---|---|
-| D1 | Réactions emoji sur un post ou un média (plusieurs par personne, 6 au plus ; demandé pendant la bêta) | M |
+| D1 | Réactions emoji sur un post ou un média : tous les emojis (sélecteur complet en français), plusieurs par personne, 6 au plus ; demandé pendant la bêta | M |
 | D2 | Double-tap = ❤️ | M |
 | D3 | Commentaires sur un post | M |
 | D9 | **Réactions perso de la bande** : emojis/stickers créés par le groupe à partir d'une photo (« Tom choqué »), utilisables comme réactions | S |

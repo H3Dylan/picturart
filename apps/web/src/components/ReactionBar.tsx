@@ -7,9 +7,10 @@ import {
   type ReactionKey,
   type Reactions,
 } from '@picturart/shared';
-import { SmilePlus } from 'lucide-react';
+import { Plus, SmilePlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCustomReactions } from '../lib/queries.ts';
+import { EmojiPicker } from './EmojiPicker.tsx';
 import styles from './ReactionBar.module.css';
 
 interface ReactionBarProps {
@@ -59,6 +60,7 @@ export function ReactionGlyph({ reaction, size = 20 }: { reaction: ReactionKey; 
 export function ReactionBar({ reactions, onReact, onDark = false }: ReactionBarProps) {
   const [local, setLocal] = useState(reactions);
   const [picking, setPicking] = useState(false);
+  const [allEmojis, setAllEmojis] = useState(false);
   const customs = useCustomReactions().data ?? [];
   const nameOf = useReactionName();
   useEffect(() => setLocal(reactions), [reactions]);
@@ -71,6 +73,7 @@ export function ReactionBar({ reactions, onReact, onDark = false }: ReactionBarP
     if (on && full) return;
     setLocal((current) => applyReaction(current, key, on));
     setPicking(false);
+    setAllEmojis(false);
     onReact(key, on);
   }
 
@@ -99,7 +102,10 @@ export function ReactionBar({ reactions, onReact, onDark = false }: ReactionBarP
         className={styles.add}
         aria-label="Réagir"
         aria-expanded={picking}
-        onClick={() => setPicking((v) => !v)}
+        onClick={() => {
+          setPicking((v) => !v);
+          setAllEmojis(false);
+        }}
       >
         <SmilePlus size={18} strokeWidth={1.8} />
       </button>
@@ -126,7 +132,18 @@ export function ReactionBar({ reactions, onReact, onDark = false }: ReactionBarP
                 {emoji}
               </button>
             ))}
+            <button
+              type="button"
+              className={styles.choice}
+              onClick={() => setAllEmojis((v) => !v)}
+              aria-label="Tous les emojis"
+              aria-expanded={allEmojis}
+              disabled={full}
+            >
+              <Plus size={20} strokeWidth={2} />
+            </button>
           </div>
+          {allEmojis && !full && <EmojiPicker onPick={(emoji) => toggle(emoji)} />}
           {customs.length > 0 && (
             <div className={styles.customs}>
               {customs.map((c) => (

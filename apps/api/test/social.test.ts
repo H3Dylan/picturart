@@ -90,9 +90,27 @@ describe('social : fil, réactions, commentaires, planche, temps réel', () => {
       expect(r).toEqual({ counts: [{ emoji: '😂', count: 2 }], mine: ['😂'] });
     });
 
-    it('refuse un emoji hors liste et les non-membres', async () => {
-      const bad = await call('lea', 'PUT', `/api/v1/posts/${post.id}/reaction`, { emoji: '💩' });
-      expect(bad.statusCode).toBe(400);
+    it('tous les emojis, sous leur forme officielle', async () => {
+      const put = (emoji: string) =>
+        call('lea', 'PUT', `/api/v1/posts/${post.id}/reaction`, { emoji });
+      // 👍️ (sélecteur de présentation en trop) et 👍 donnent la même réaction
+      await put('👍️');
+      const r = (await put('👍')).json();
+      expect(r.counts).toContainEqual({ emoji: '👍', count: 1 });
+      expect(r.mine.filter((e: string) => e.startsWith('👍'))).toEqual(['👍']);
+      // Couleur de peau et drapeau
+      expect((await put('🫶🏽')).json().mine).toContain('🫶🏽');
+      expect((await put('🇫🇷')).statusCode).toBe(200);
+      for (const emoji of ['👍', '🫶🏽', '🇫🇷']) {
+        await call('lea', 'DELETE', `/api/v1/posts/${post.id}/reaction`, { emoji });
+      }
+    });
+
+    it('refuse ce qui n’est pas un emoji, et les non-membres', async () => {
+      for (const emoji of ['lol', '😂😂', '', '<b>']) {
+        const bad = await call('lea', 'PUT', `/api/v1/posts/${post.id}/reaction`, { emoji });
+        expect(bad.statusCode).toBe(400);
+      }
       const intrus = await call('intrus', 'PUT', `/api/v1/posts/${post.id}/reaction`, {
         emoji: '❤️',
       });
