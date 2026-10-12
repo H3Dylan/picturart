@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,11 +11,35 @@ import { users } from '../src/db/schema.ts';
 
 export const ORIGIN = 'https://pictur.test';
 
-/** Application complète sur un PostgreSQL embarqué en mémoire (PGlite), migrations appliquées. */
+/**
+ * Base de test : PGlite en mémoire par défaut ; avec `TEST_POSTGRES_URL` (la CI), une base
+ * jetable sur un vrai PostgreSQL 17, comme en production : certains écarts entre les deux
+ * pilotes n'apparaissent qu'en vrai (dates passées dans du SQL brut, par exemple).
+ */
+async function testDatabase() {
+  const server = process.env.TEST_POSTGRES_URL;
+  if (!server) return { url: 'pglite://memory', drop: async () => {} };
+  const { default: postgres } = await import('postgres');
+  const name = `picturart_test_${randomUUID().replaceAll('-', '')}`;
+  const admin = postgres(server, { max: 1, onnotice: () => {} });
+  await admin.unsafe(`create database ${name}`);
+  const url = new URL(server);
+  url.pathname = `/${name}`;
+  return {
+    url: url.toString(),
+    drop: async () => {
+      await admin.unsafe(`drop database if exists ${name} with (force)`);
+      await admin.end();
+    },
+  };
+}
+
+/** Application complète sur une base de test neuve, migrations appliquées. */
 export async function createTestApp() {
   const mediaDir = await mkdtemp(join(tmpdir(), 'picturart-test-'));
+  const testDb = await testDatabase();
   const config = loadConfig({
-    DATABASE_URL: 'pglite://memory',
+    DATABASE_URL: testDb.url,
     APP_ORIGIN: ORIGIN,
     MEDIA_DIR: mediaDir,
     // Transcodage logiciel : résultat identique avec ou sans iGPU
@@ -48,6 +73,7 @@ export async function createTestApp() {
   async function close() {
     await app.close();
     await database.close();
+    await testDb.drop();
     await rm(mediaDir, { recursive: true, force: true });
   }
 

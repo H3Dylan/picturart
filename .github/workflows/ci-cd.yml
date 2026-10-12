@@ -16,6 +16,18 @@ jobs:
   check:
     name: Lint, types, tests, build
     runs-on: ubuntu-latest
+    # Les tests de l'API tournent aussi sur un vrai PostgreSQL 17, comme en production
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test" --health-interval 5s --health-retries 10
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -30,6 +42,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
         env:
+          TEST_POSTGRES_URL: postgres://test:test@localhost:5432/test
           # libheif 1.17 d'Ubuntu 24.04 : heif-convert (renommé heif-dec depuis 1.18)
           HEIF_DEC_PATH: heif-convert
       - run: pnpm build

@@ -9,6 +9,7 @@ import ui from '../components/ui.module.css';
 import { timeAgo } from '../lib/format.ts';
 import { usePlanche, usePost, useReact } from '../lib/queries.ts';
 import { useDoubleTap } from '../lib/useDoubleTap.ts';
+import { viewerPosition } from '../lib/viewer.ts';
 import v from './ViewerPage.module.css';
 
 interface Item {
@@ -28,12 +29,14 @@ export function PostViewerPage() {
         .map((m) => ({ mediaId: m.id, postId, kind: m.kind })),
     [post.data, postId],
   );
-  // L'index peut être un identifiant de média (lien depuis un profil)
-  const position = /^d+$/.test(index) ? Number(index) : items.findIndex((i) => i.mediaId === index);
+  const position = viewerPosition(
+    index,
+    items.map((i) => i.mediaId),
+  );
   return (
     <Viewer
       items={items}
-      index={Math.max(0, position)}
+      index={position}
       loading={post.isPending}
       hrefFor={(i) => `/posts/${postId}/photos/${i}`}
     />

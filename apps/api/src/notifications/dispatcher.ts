@@ -4,7 +4,7 @@ import {
   PREF_OF_TYPE,
   summarizeForPush,
 } from '@picturart/shared';
-import { and, eq, gt, isNull, max, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, lte, max, sql } from 'drizzle-orm';
 import webPush from 'web-push';
 import type { Config } from '../config.ts';
 import type { Db } from '../db/client.ts';
@@ -122,7 +122,7 @@ export class PushDispatcher {
     await db
       .update(notifications)
       .set({ pushedAt: now })
-      .where(and(isNull(notifications.pushedAt), sql`${notifications.createdAt} <= ${fresh}`));
+      .where(and(isNull(notifications.pushedAt), lte(notifications.createdAt, fresh)));
   }
 
   async #flush(userId: string, now: Date, fresh: Date) {
