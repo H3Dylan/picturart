@@ -14,7 +14,7 @@ flowchart LR
   end
   subgraph Proxmox["Serveur Proxmox"]
     T["Traefik + CrowdSec<br/>(CT 102)"]
-    subgraph CT108["CT 108 · picturart"]
+    subgraph CT107["CT 107 · picturart"]
       API["API Fastify<br/>REST · tus · WebSocket"]
       W["Worker<br/>(jobs pg-boss)"]
       DB[("PostgreSQL")]
@@ -32,7 +32,7 @@ flowchart LR
   API -. WebSocket temps réel .-> PWA
 ```
 
-- **Un seul serveur**, un seul conteneur LXC (CT 108) avec Docker Compose : API, worker, PostgreSQL.
+- **Un seul serveur**, un seul conteneur LXC (CT 107) avec Docker Compose : API, worker, PostgreSQL.
 - **L'API** gère l'authentification, les données, l'envoi des fichiers et le temps réel.
 - **Le worker** fait le travail lourd en arrière-plan : vignettes, vidéos, notifications push, purge de la corbeille, souvenirs.
 - Les deux partagent le même code (monorepo) et communiquent par la base (file de jobs + `LISTEN/NOTIFY`).
@@ -244,8 +244,8 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 ### Sur le serveur Proxmox
 | Élément | Valeur proposée |
 |---|---|
-| Conteneur | **CT 108 `picturart`**, Debian 13, 4 cœurs, 4 Go RAM, IP `192.168.1.108` |
-| Médias | Dataset ZFS **`rpool/picturart`**, quota **250 Go** au départ (à ajuster selon le sort d'Immich) |
+| Conteneur | **CT 107 `picturart`** (ancien emplacement d'Immich, supprimé), Debian 13, 4 cœurs, 4 Go RAM, IP `192.168.1.107` |
+| Médias | Dataset ZFS **`rpool/picturart`**, quota **500 Go** |
 | GPU | `/dev/dri/renderD128` partagé avec le CT (QuickSync) |
 | Domaine | **`pictur.dylanbouillon.fr`** — route Traefik + CrowdSec, sur le modèle de `portfolio.yml` |
 | Services | `docker compose` : `api`, `worker`, `postgres` |
@@ -254,12 +254,12 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 ### Chaîne CI/CD
 1. **Pull request / push** → GitHub Actions : lint, vérification des types, tests (avec un PostgreSQL de test), build.
 2. **Merge sur `main`** → construction des images Docker `api` et `web`, publication sur GHCR (privé).
-3. **Déploiement** : un **runner GitHub auto-hébergé dans le CT 108** récupère les nouvelles images et relance `docker compose`. Il ne fait que des connexions sortantes : aucun port à ouvrir sur le serveur.
+3. **Déploiement** : un **runner GitHub auto-hébergé dans le CT 107** récupère les nouvelles images et relance `docker compose`. Il ne fait que des connexions sortantes : aucun port à ouvrir sur le serveur.
 4. Migrations de base appliquées automatiquement au démarrage de l'API.
 
 ### Environnements
 - **Local** : `docker compose` (PostgreSQL) + `pnpm dev` (API et front en rechargement à chaud).
-- **Production** : CT 108.
+- **Production** : CT 107.
 - Pas de préproduction au début ; on l'ajoutera si besoin.
 
 ---
@@ -268,7 +268,7 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 
 | Jalon | Contenu | Résultat |
 |---|---|---|
-| **M0 · Fondations** | Monorepo, CI, Docker, CT 108, Traefik, déploiement automatique | Une page « Pictur'Art arrive » en ligne sur `pictur.dylanbouillon.fr` |
+| **M0 · Fondations** | Monorepo, CI, Docker, CT 107, Traefik, déploiement automatique | Une page « Pictur'Art arrive » en ligne sur `pictur.dylanbouillon.fr` |
 | **M1 · Comptes** | Invitations, inscription, connexion, profil, thème clair/sombre | La bande peut créer son compte |
 | **M2 · Événements & photos** | Événements, membres, rôles, création de post, envoi tus, vignettes | On peut poster des photos |
 | **M3 · Social** | Fil, page événement (planche), visionneuse, réactions, commentaires, temps réel | L'expérience de base est complète |
