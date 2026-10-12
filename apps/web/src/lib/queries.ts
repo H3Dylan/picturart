@@ -1,4 +1,5 @@
 import type {
+  CommentDto,
   CreatedInvite,
   CreateEventInput,
   CreatePostInput,
@@ -7,8 +8,11 @@ import type {
   InvitePreview,
   LoginInput,
   Me,
+  PlancheItem,
   PostDto,
   PostsPage,
+  ReactionEmoji,
+  Reactions,
   Role,
   SignupInput,
   UpdateMeInput,
@@ -21,8 +25,103 @@ export const keys = {
   events: ['events'] as const,
   event: (id: string) => ['event', id] as const,
   posts: (eventId: string) => ['posts', eventId] as const,
+  feed: ['feed'] as const,
+  post: (id: string) => ['post', id] as const,
+  comments: (postId: string) => ['comments', postId] as const,
+  planche: (eventId: string) => ['planche', eventId] as const,
   invite: (token: string) => ['invite', token] as const,
 };
+
+/** Tant que des photos se développent, on rafraîchit régulièrement. */
+const pollWhileProcessing = (pages: PostsPage[] | undefined) =>
+  pages?.some((page) => page.posts.some((post) => post.media.some((m) => m.status !== 'ready')))
+    ? 3000
+    : false;
+
+export function useFeed() {
+  return useInfiniteQuery({
+    queryKey: keys.feed,
+    queryFn: ({ pageParam }) =>
+      api<PostsPage>(`/feed${pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : ''}`),
+    initialPageParam: '',
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    refetchInterval: (query) => pollWhileProcessing(query.state.data?.pages),
+  });
+}
+
+export function usePost(id: string | undefined) {
+  return useQuery({
+    queryKey: keys.post(id ?? ''),
+    queryFn: () => api<PostDto>(`/posts/${id}`),
+    enabled: Boolean(id),
+  });
+}
+
+export function usePlanche(eventId: string, best = false) {
+  return useQuery({
+    queryKey: [...keys.planche(eventId), best ? 'meilleures' : 'date'],
+    queryFn: () => api<PlancheItem[]>(`/events/${eventId}/media${best ? '?tri=meilleures' : ''}`),
+  });
+}
+
+export function useComments(postId: string) {
+  return useQuery({
+    queryKey: keys.comments(postId),
+    queryFn: () => api<CommentDto[]>(`/posts/${postId}/comments`),
+  });
+}
+
+export function useAddComment(postId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) =>
+      api<CommentDto>(`/posts/${postId}/comments`, { method: 'POST', body: { body } }),
+    onSuccess: (comment) => {
+      client.setQueryData<CommentDto[]>(keys.comments(postId), (list) => [
+        ...(list ?? []),
+        comment,
+      ]);
+      client.invalidateQueries({ queryKey: keys.post(postId) });
+      client.invalidateQueries({ queryKey: keys.feed });
+    },
+  });
+}
+
+export function useDeleteComment(postId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => api<void>(`/comments/${commentId}`, { method: 'DELETE' }),
+    onSuccess: (_data, commentId) => {
+      client.setQueryData<CommentDto[]>(keys.comments(postId), (list) =>
+        (list ?? []).filter((c) => c.id !== commentId),
+      );
+      client.invalidateQueries({ queryKey: keys.post(postId) });
+    },
+  });
+}
+
+/** Réagir à un post ou à une photo (emoji, ou `null` pour retirer sa réaction). */
+export function useReact(target: {
+  kind: 'post' | 'media';
+  id: string;
+  postId: string;
+  eventId: string;
+}) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (emoji: ReactionEmoji | null) =>
+      api<Reactions>(`/${target.kind === 'post' ? 'posts' : 'media'}/${target.id}/reaction`, {
+        method: emoji ? 'PUT' : 'DELETE',
+        ...(emoji && { body: { emoji } }),
+      }),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: keys.post(target.postId) });
+      client.invalidateQueries({ queryKey: keys.feed });
+      client.invalidateQueries({ queryKey: keys.posts(target.eventId) });
+      client.invalidateQueries({ queryKey: keys.planche(target.eventId) });
+    },
+  });
+}
 
 export function useEvent(id: string) {
   return useQuery({ queryKey: keys.event(id), queryFn: () => api<EventDetail>(`/events/${id}`) });
@@ -37,13 +136,7 @@ export function useEventPosts(eventId: string) {
       ),
     initialPageParam: '',
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    // Tant que des photos se développent, on rafraîchit régulièrement
-    refetchInterval: (query) =>
-      query.state.data?.pages.some((page) =>
-        page.posts.some((post) => post.media.some((m) => m.status !== 'ready')),
-      )
-        ? 3000
-        : false,
+    refetchInterval: (query) => pollWhileProcessing(query.state.data?.pages),
   });
 }
 
@@ -58,6 +151,7 @@ export function useDeletePost(eventId: string) {
   return useMutation({
     mutationFn: (postId: string) => api<void>(`/posts/${postId}`, { method: 'DELETE' }),
     onSuccess: () => {
+      client.invalidateQueries({ queryKey: keys.feed });
       client.invalidateQueries({ queryKey: keys.posts(eventId) });
       client.invalidateQueries({ queryKey: keys.event(eventId) });
     },

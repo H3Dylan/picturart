@@ -36,8 +36,13 @@
 .tile {
   position: relative;
   display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
   background: var(--film);
   overflow: hidden;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .img {
@@ -48,6 +53,7 @@
 }
 
 .grid {
+  position: relative;
   display: grid;
   gap: 3px;
   border-radius: var(--radius-xs);
@@ -119,4 +125,74 @@
   margin: 0;
   font-size: 15px;
   line-height: 1.45;
+}
+
+.eventLink {
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Cœur du double appui */
+.heart {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 88px;
+  pointer-events: none;
+  animation: heart-pop 0.8s ease-out forwards;
+}
+
+@keyframes heart-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart {
+    animation-duration: 0.01s;
+  }
+}
+
+.comments {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  background: var(--comment-bg);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.commentText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more2 {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--accent-text);
 }

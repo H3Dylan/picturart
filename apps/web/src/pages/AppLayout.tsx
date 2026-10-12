@@ -1,14 +1,19 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { BottomNav } from '../components/BottomNav.tsx';
 import { useMe } from '../lib/queries.ts';
+import { useRealtime } from '../lib/realtime.ts';
 import { useApplyTheme } from '../lib/theme.ts';
 import { Splash } from './Splash.tsx';
 
-/** Pages réservées aux membres connectés, avec la barre de navigation. */
-export function AppLayout() {
+/**
+ * Pages réservées aux membres connectés : thème, temps réel et, sauf pour les écrans
+ * plein écran (visionneuse, commentaires), la barre de navigation.
+ */
+export function AppLayout({ nav = true }: { nav?: boolean }) {
   const { data: me, isPending } = useMe();
   const location = useLocation();
   useApplyTheme(me?.theme);
+  useRealtime(Boolean(me));
 
   if (isPending) return <Splash />;
   if (!me) {
@@ -18,14 +23,14 @@ export function AppLayout() {
   return (
     <>
       <Outlet />
-      <BottomNav />
+      {nav && <BottomNav />}
     </>
   );
 }
 
-/** Racine : vers les événements si connecté, sinon vers la connexion. */
+/** Racine : vers le fil si connecté, sinon vers la connexion. */
 export function HomeRedirect() {
   const { data: me, isPending } = useMe();
   if (isPending) return <Splash />;
-  return <Navigate to={me ? '/evenements' : '/connexion'} replace />;
+  return <Navigate to={me ? '/fil' : '/connexion'} replace />;
 }

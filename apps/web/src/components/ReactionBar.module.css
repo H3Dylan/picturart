@@ -1,0 +1,92 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.pill {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: var(--reaction-2);
+  color: var(--ink);
+  font: 600 14px var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.mine {
+  background: var(--reaction-1);
+  border-color: var(--accent);
+}
+
+.add {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  border: 1px dashed var(--ink-muted);
+  background: transparent;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.picker {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.12);
+}
+
+.choice {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.chosen {
+  background: var(--reaction-1);
+}
+
+/* Visionneuse : fond sombre */
+.dark .pill {
+  background: rgb(255 255 255 / 0.12);
+  color: #f4f0ea;
+}
+
+.dark .mine {
+  border-color: var(--stamp);
+}
+
+.dark .add {
+  border-color: rgb(255 255 255 / 0.5);
+  color: #f4f0ea;
+}
+
+.picker {
+  margin: 0;
+  min-width: 0;
+}
+
+.legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

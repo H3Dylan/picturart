@@ -7,7 +7,7 @@ Le réseau social privé de la bande : vos soirées, vos voyages et vos têtes, 
 - Notifications push, souvenirs « il y a 1 an »
 - PWA installable sur iOS et Android, auto-hébergée
 
-> 🚧 En développement — **M0**, **M1** et **M2 · Événements & photos** ✅ en ligne sur [pictur.dylanbouillon.fr](https://pictur.dylanbouillon.fr), prochain jalon : **M3 · Social** (fil, visionneuse, réactions, commentaires). Réécriture complète du projet de cours Pictur'Art.
+> 🚧 En développement — **M0**, **M1**, **M2** et **M3 · Social** ✅ en ligne sur [pictur.dylanbouillon.fr](https://pictur.dylanbouillon.fr), prochain jalon : **M4 · Vidéos & HEIC**. Réécriture complète du projet de cours Pictur'Art.
 
 ## Documentation
 

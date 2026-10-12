@@ -1,20 +1,27 @@
 import { Camera, ChevronLeft, Users } from 'lucide-react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { Avatar } from '../components/Avatar.tsx';
+import { Planche } from '../components/Planche.tsx';
 import { PostCard } from '../components/PostCard.tsx';
 import ui from '../components/ui.module.css';
 import { formatEventDates } from '../lib/format.ts';
-import { useDeletePost, useEvent, useEventPosts, useMe } from '../lib/queries.ts';
+import { useDeletePost, useEvent, useEventPosts, useMe, usePlanche } from '../lib/queries.ts';
 import ev from './EventPage.module.css';
 import styles from './pages.module.css';
 import { Splash } from './Splash.tsx';
 
+const TABS = [
+  { id: 'planche', label: 'Planche' },
+  { id: 'posts', label: 'Posts' },
+  { id: 'meilleures', label: '★ Meilleures' },
+] as const;
+type Tab = (typeof TABS)[number]['id'];
+
 export function EventPage() {
   const { id = '' } = useParams();
-  const { data: me } = useMe();
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = TABS.find((t) => t.id === params.get('vue'))?.id ?? 'planche';
   const event = useEvent(id);
-  const posts = useEventPosts(id);
-  const remove = useDeletePost(id);
 
   if (event.isPending) return <Splash />;
   if (event.isError) {
@@ -32,7 +39,6 @@ export function EventPage() {
   const e = event.data;
   const meta = [formatEventDates(e.startsOn, e.endsOn), e.location].filter(Boolean).join(' · ');
   const canPost = e.role !== 'viewer';
-  const allPosts = posts.data?.pages.flatMap((page) => page.posts) ?? [];
 
   return (
     <main className={`${styles.screen} ${styles.withNav}`}>
@@ -70,39 +76,28 @@ export function EventPage() {
         </div>
       </section>
 
-      {posts.data && allPosts.length === 0 && (
-        <section className={ui.card} style={{ padding: 18 }}>
-          <p className={styles.lead}>
-            La pellicule est vierge.{' '}
-            {canPost
-              ? 'Développe les premières photos de l’événement.'
-              : 'Rien n’a encore été posté.'}
-          </p>
-        </section>
-      )}
-
-      <div className={styles.stack} style={{ gap: 14 }}>
-        {allPosts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            isAuthor={post.author.id === me?.id}
-            onDelete={() => remove.mutate(post.id)}
-            deleting={remove.isPending}
-          />
+      <div role="tablist" aria-label="Vue de l’événement" className={ui.segmented}>
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`${ui.segment} ${ev.tab}`}
+            onClick={() => setParams(t.id === 'planche' ? {} : { vue: t.id }, { replace: true })}
+          >
+            {t.label}
+          </button>
         ))}
       </div>
 
-      {posts.hasNextPage && (
-        <button
-          type="button"
-          className={ui.buttonSecondary}
-          onClick={() => posts.fetchNextPage()}
-          disabled={posts.isFetchingNextPage}
-        >
-          {posts.isFetchingNextPage ? 'Chargement…' : 'Voir les posts plus anciens'}
-        </button>
-      )}
+      <div role="tabpanel">
+        {tab === 'posts' ? (
+          <EventPosts eventId={id} canPost={canPost} />
+        ) : (
+          <EventPlanche eventId={id} best={tab === 'meilleures'} canPost={canPost} />
+        )}
+      </div>
 
       {canPost && (
         <div className={ev.cta}>
@@ -113,5 +108,65 @@ export function EventPage() {
         </div>
       )}
     </main>
+  );
+}
+
+function Empty({ canPost, best }: { canPost: boolean; best?: boolean }) {
+  return (
+    <section className={ui.card} style={{ padding: 18 }}>
+      <p className={styles.lead}>
+        {best
+          ? 'Aucune photo n’a encore reçu de réaction. Double-appuie sur tes préférées !'
+          : `La pellicule est vierge. ${canPost ? 'Développe les premières photos de l’événement.' : 'Rien n’a encore été posté.'}`}
+      </p>
+    </section>
+  );
+}
+
+function EventPlanche({
+  eventId,
+  best,
+  canPost,
+}: {
+  eventId: string;
+  best: boolean;
+  canPost: boolean;
+}) {
+  const planche = usePlanche(eventId, best);
+  if (planche.isPending) return null;
+  if (planche.isError) return <p className={ui.formError}>{planche.error.message}</p>;
+  if (planche.data.length === 0) return <Empty canPost={canPost} best={best} />;
+  return <Planche items={planche.data} eventId={eventId} best={best} />;
+}
+
+function EventPosts({ eventId, canPost }: { eventId: string; canPost: boolean }) {
+  const { data: me } = useMe();
+  const posts = useEventPosts(eventId);
+  const remove = useDeletePost(eventId);
+  const all = posts.data?.pages.flatMap((page) => page.posts) ?? [];
+
+  if (posts.data && all.length === 0) return <Empty canPost={canPost} />;
+  return (
+    <div className={styles.stack} style={{ gap: 14 }}>
+      {all.map((post) => (
+        <PostCard
+          key={post.id}
+          post={post}
+          isAuthor={post.author.id === me?.id}
+          onDelete={() => remove.mutate(post.id)}
+          deleting={remove.isPending}
+        />
+      ))}
+      {posts.hasNextPage && (
+        <button
+          type="button"
+          className={ui.buttonSecondary}
+          onClick={() => posts.fetchNextPage()}
+          disabled={posts.isFetchingNextPage}
+        >
+          {posts.isFetchingNextPage ? 'Chargement…' : 'Voir les posts plus anciens'}
+        </button>
+      )}
+    </div>
   );
 }

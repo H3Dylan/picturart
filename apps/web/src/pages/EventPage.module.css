@@ -25,3 +25,14 @@
   bottom: calc(100px + env(safe-area-inset-bottom));
   margin-top: auto;
 }
+
+/* Onglets : boutons dans le sélecteur segmenté de la DA */
+.tab {
+  border: none;
+  background: transparent;
+}
+
+.tab[aria-selected="true"] {
+  background: var(--chip-active-bg);
+  color: var(--chip-active-fg);
+}

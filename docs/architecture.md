@@ -212,6 +212,7 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 | Réactions perso | `GET /custom-reactions` · `POST /custom-reactions` (recadrage d'un média) |
 | Activité | `GET /notifications?cursor=` · `POST /notifications/read` |
 | Push | `POST /push/subscriptions` · `DELETE /push/subscriptions/:id` |
+| Planche contact | `GET /events/:id/media?tri=meilleures` (toutes les photos, ou les plus réactionnées) |
 | Temps réel | `GET /ws` (WebSocket) |
 
 - **Pagination par curseur** (`created_at` + `id`), pas par numéro de page : le fil reste stable quand de nouveaux posts arrivent.
@@ -219,8 +220,9 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 
 ### Temps réel
 - Une connexion WebSocket par appareil ; le serveur l'abonne aux événements dont l'utilisateur est membre.
-- Messages : `post.created`, `media.ready`, `reaction.updated`, `comment.created`, `notification.created`.
-- Le front met à jour le cache TanStack Query à la réception : pas de rechargement.
+- Messages : `post.created`, `post.deleted`, `media.ready`, `reaction.updated`, `comment.created`, `comment.deleted` (et `notification.created` en M5).
+- **Décision M3** : les messages ne transportent que des identifiants, jamais de contenu. Le front invalide les requêtes TanStack Query concernées et relit l'API, qui refait le contrôle d'accès : pas de rechargement, et rien ne fuit par le canal temps réel.
+- Hub en mémoire dans l'API (une instance suffit pour la bande) ; ping toutes les 25 s, reconnexion progressive côté PWA et au retour au premier plan.
 
 ### Notifications push
 - Chaque action (photo postée, réaction, commentaire) crée une ligne `notifications`.
@@ -273,7 +275,7 @@ REST sous `/api/v1`, JSON, validée par Zod. Principales routes :
 | ✅ **M0 · Fondations** | Monorepo, CI, Docker, CT 107, Traefik, déploiement automatique | Une page « Pictur'Art arrive » en ligne sur `pictur.dylanbouillon.fr` |
 | ✅ **M1 · Comptes** | Invitations, inscription, connexion, profil, thème clair/sombre | La bande peut créer son compte |
 | ✅ **M2 · Événements & photos** | Événements, membres, rôles, création de post, envoi tus, vignettes | On peut poster des photos |
-| **M3 · Social** | Fil, page événement (planche), visionneuse, réactions, commentaires, temps réel | L'expérience de base est complète |
+| ✅ **M3 · Social** | Fil, page événement (planche), visionneuse, réactions, commentaires, temps réel | L'expérience de base est complète |
 | **M4 · Vidéos & HEIC** | Transcodage QuickSync, HDR, HEIC | Les médias iPhone passent sans souci |
 | **M5 · PWA & notifs** | Installation, push regroupées, écran Activité | On est prévenu quand la bande poste |
 | **M6 · Fun** | Réactions perso, souvenirs « il y a 1 an », stats de profil | La personnalité de l'app |

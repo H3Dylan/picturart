@@ -1,6 +1,7 @@
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import websocket from '@fastify/websocket';
 import type { ApiErrorBody, Health } from '@picturart/shared';
 import Fastify from 'fastify';
 import { registerAuth } from './auth/plugin.ts';
@@ -16,10 +17,14 @@ import { eventsRoutes } from './modules/events.routes.ts';
 import { invitesRoutes } from './modules/invites.routes.ts';
 import { mediaRoutes } from './modules/media.routes.ts';
 import { postsRoutes } from './modules/posts.routes.ts';
+import { socialRoutes } from './modules/social.routes.ts';
+import { RealtimeHub } from './realtime/hub.ts';
+import { realtimeRoutes } from './realtime/routes.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
     mediaQueue: MediaQueue;
+    realtime: RealtimeHub;
   }
 }
 
@@ -37,8 +42,12 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
   await storage.init();
   const queue = new MediaQueue(db, storage, app.log);
   app.decorate('mediaQueue', queue);
+  const hub = new RealtimeHub(db, app.log);
+  app.decorate('realtime', hub);
+  queue.onReady = (mediaId) => void hub.publishMediaReady(mediaId);
 
   await app.register(cookie);
+  await app.register(websocket, { options: { maxPayload: 4096 } });
   await app.register(rateLimit, {
     global: false,
     errorResponseBuilder: (_request, context) => ({
@@ -82,7 +91,9 @@ export async function buildApp({ config, database, logger = false }: AppDeps) {
   eventsRoutes(app, db, config);
   eventDetailRoutes(app, db);
   invitesRoutes(app, db, config);
-  postsRoutes(app, db);
+  postsRoutes(app, db, hub);
+  socialRoutes(app, db, hub);
+  realtimeRoutes(app, hub, config);
   mediaRoutes(app, db);
   registerUploads(app, db, storage, queue);
 

@@ -42,3 +42,14 @@ export {
   type PostDto,
   type PostsPage,
 } from './posts.ts';
+export {
+  type CommentDto,
+  commentSchema,
+  type PlancheItem,
+  REACTION_EMOJIS,
+  type ReactionCount,
+  type ReactionEmoji,
+  type Reactions,
+  type RealtimeMessage,
+  reactionSchema,
+} from './social.ts';

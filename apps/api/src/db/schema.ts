@@ -166,3 +166,52 @@ export const mediaVariants = pgTable(
   },
   (t) => [primaryKey({ columns: [t.mediaId, t.variant] })],
 );
+
+/** Une réaction par personne et par post (la clé primaire le garantit). */
+export const postReactions = pgTable(
+  'post_reactions',
+  {
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    emoji: text('emoji').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.userId] })],
+);
+
+/** Une réaction par personne et par photo. */
+export const mediaReactions = pgTable(
+  'media_reactions',
+  {
+    mediaId: uuid('media_id')
+      .notNull()
+      .references(() => media.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    emoji: text('emoji').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.mediaId, t.userId] })],
+);
+
+export const comments = pgTable(
+  'comments',
+  {
+    id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: createdAt(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => [index('comments_post_created_idx').on(t.postId, t.createdAt)],
+);

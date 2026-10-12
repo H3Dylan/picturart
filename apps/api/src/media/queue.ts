@@ -18,6 +18,8 @@ export class MediaQueue {
   readonly #db: Db;
   readonly #storage: MediaStorage;
   readonly #log: FastifyBaseLogger;
+  /** Appelé quand une photo est prête (diffusion temps réel). */
+  onReady: ((mediaId: string) => void) | undefined;
 
   constructor(db: Db, storage: MediaStorage, log: FastifyBaseLogger, concurrency = 2) {
     this.#db = db;
@@ -50,6 +52,7 @@ export class MediaQueue {
       const mediaId = this.#pending.shift() as string;
       this.#running++;
       processPhoto(this.#db, this.#storage, mediaId)
+        .then(() => this.onReady?.(mediaId))
         .catch((error) => this.#log.error({ err: error, mediaId }, 'traitement du média échoué'))
         .finally(() => {
           this.#running--;

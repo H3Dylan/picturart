@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { CommentDto, Reactions } from './social.ts';
 
 /** Formats acceptés à l'envoi (photos). Les vidéos et le HEIC natif arrivent au jalon M4. */
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -35,15 +36,20 @@ export interface MediaDto {
   height: number | null;
   takenAt: string | null;
   position: number;
+  reactions: Reactions;
 }
 
 export interface PostDto {
   id: string;
   eventId: string;
+  event: { id: string; name: string };
   author: { id: string; displayName: string };
   caption: string;
   createdAt: string;
   media: MediaDto[];
+  reactions: Reactions;
+  commentCount: number;
+  lastComment: CommentDto | null;
 }
 
 export interface PostsPage {

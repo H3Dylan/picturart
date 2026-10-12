@@ -15,6 +15,13 @@
       "when": 1791801692191,
       "tag": "0001_round_loki",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791803050401,
+      "tag": "0002_open_swarm",
+      "breakpoints": true
     }
   ]
 }
